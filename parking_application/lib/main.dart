@@ -85,7 +85,7 @@ class UserInputPage extends StatelessWidget {
       ),
       body: Center(
         child: Card(
-          margin: EdgeInsets.fromLTRB(150.0, 20, 150, 100),
+          margin: EdgeInsets.fromLTRB(170.0, 20, 170, 100),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(12.0, 12.0, 12.0, 12.0),
             child: Column(
@@ -94,7 +94,46 @@ class UserInputPage extends StatelessWidget {
                 Icon(Icons.supervised_user_circle_rounded, color: Colors.deepPurple, size: 55),
                 SizedBox(width: 40),
                 Text('Korisnicka prijava', style: TextStyle(color: Colors.black)),
-                Text('Pronadite i rezervisite parking mjesta u blizini', style: TextStyle(color: Colors.black54)),
+                Text('Unesite vase podatke za nastavak', style: TextStyle(color: Colors.black54)),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(30.0, 20.0, 30.0, 0.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(0.0, 0.0, 0.0, 8.0),
+                        child: Text('Ime'),
+                      ),
+                      TextField(
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(),
+                          hintText: "Unesite vase ime",
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(0.0, 8.0, 0.0, 8.0),
+                        child: Text('Email'),
+                      ),
+                      TextField(
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(),
+                          hintText: "Unesite vas email",
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(0.0, 8.0, 0.0, 8.0),
+                        child: Text('Lozinka'),
+                      ),
+                      TextField(
+                        obscureText: true,
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(),
+                          hintText: "Unesite vasu lozinku",
+                        ),
+                      ),
+                    ]
+                  ),
+                )
               ],
             ),
           ),
