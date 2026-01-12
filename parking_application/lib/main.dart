@@ -48,9 +48,11 @@ class LoginPage extends StatelessWidget {
               margin: EdgeInsets.fromLTRB(150.0, 20, 150, 100),
               child: GestureDetector(
                 onTap: () {
-                  // Handle login tap
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Gesture Detected!')));
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (context) => UserInputPage())
+                  );
                 },
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(12.0, 12.0, 12.0, 12.0),
@@ -73,3 +75,31 @@ class LoginPage extends StatelessWidget {
   }
 }
 
+class UserInputPage extends StatelessWidget {
+  const UserInputPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+      ),
+      body: Center(
+        child: Card(
+          margin: EdgeInsets.fromLTRB(150.0, 20, 150, 100),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12.0, 12.0, 12.0, 12.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                Icon(Icons.supervised_user_circle_rounded, color: Colors.deepPurple, size: 55),
+                SizedBox(width: 40),
+                Text('Korisnicka prijava', style: TextStyle(color: Colors.black)),
+                Text('Pronadite i rezervisite parking mjesta u blizini', style: TextStyle(color: Colors.black54)),
+              ],
+            ),
+          ),
+        )
+      ),
+    );
+  }
+}
