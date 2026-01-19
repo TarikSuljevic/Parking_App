@@ -44,36 +44,68 @@ class LoginPage extends StatelessWidget {
             ),
             Text('ParkEasy'),
             Text('Pronađite i rezervišite parking mjesto odmah'),
-            Card(
-              margin: EdgeInsets.fromLTRB(150.0, 20, 150, 100),
-              child: GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute<void>(
-                      builder: (context) => UserInputPage())
-                  );
-                },
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12.0, 12.0, 12.0, 12.0),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: [
-                      Icon(Icons.supervised_user_circle_rounded, color: Colors.deepPurple, size: 55),
-                      SizedBox(width: 40),
-                      Text('Korisnicka prijava', style: TextStyle(color: Colors.black)),
-                      Text('Pronadite i rezervisite parking mjesta u blizini', style: TextStyle(color: Colors.black54)),
-                    ],
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Card(
+                
+                  margin: EdgeInsets.symmetric(horizontal: 10,vertical: 20),
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute<void>(
+                          builder: (context) => UserInputPage())
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(12.0, 12.0, 12.0, 12.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: [
+                          Icon(Icons.supervised_user_circle_rounded, color: Colors.deepPurple, size: 55),
+                          SizedBox(width: 40),
+                          Text('Korisnicka prijava', style: TextStyle(color: Colors.black)),
+                          Text('Pronadite i rezervisite parking mjesta u blizini', style: TextStyle(color: Colors.black54)),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-              ),
+                 Card(
+                  margin: EdgeInsets.symmetric(horizontal: 10,vertical: 20),
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute<void>(
+                          builder: (context) => Placeholder())
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(12.0, 12.0, 12.0, 12.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: [
+                          Icon(Icons.supervised_user_circle_outlined, color: Colors.deepPurple, size: 55),
+                          SizedBox(width: 40),
+                          Text('Administratorska prijava', style: TextStyle(color: Colors.black)),
+                          Text('Upravljajte parking objektima i rezervacijama', style: TextStyle(color: Colors.black54)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
+            
           ],
         ),
       ),
     );
   }
 }
+
 
 class UserInputPage extends StatelessWidget {
   const UserInputPage({super.key});
