@@ -108,8 +108,15 @@ class LoginPage extends StatelessWidget {
 
 
 class UserInputPage extends StatelessWidget {
+class UserInputPage extends StatefulWidget {
   const UserInputPage({super.key});
 
+  @override
+  State<UserInputPage> createState() => _UserInputPageState();
+}
+
+class _UserInputPageState extends State<UserInputPage> {
+  late String ime = '';
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -150,31 +157,69 @@ class UserInputPage extends StatelessWidget {
                         padding: const EdgeInsets.fromLTRB(0.0, 0.0, 0.0, 8.0),
                         child: Text('Ime'),
                       ),
-                      TextField(
+                      TextFormField(
                         decoration: InputDecoration(
                           border: OutlineInputBorder(),
                           hintText: "Unesite vase ime",
                         ),
+                        validator: (String? value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Molimo unesite ime';
+                          }
+                          return null;
+                        },
+                        onChanged: (value) {
+                          ime = value;
+                        },
                       ),
                       Padding(
                         padding: const EdgeInsets.fromLTRB(0.0, 8.0, 0.0, 8.0),
                         child: Text('Email'),
                       ),
-                      TextField(
+                      TextFormField(
                         decoration: InputDecoration(
                           border: OutlineInputBorder(),
                           hintText: "Unesite vas email",
                         ),
+                        validator: (String? value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Molimo unesite email';
+                          }
+                          if (!value.contains('@')) {
+                            return 'Molimo unesite @ u email adresu';
+                          }
+                          return null;
+                        },
                       ),
                       Padding(
                         padding: const EdgeInsets.fromLTRB(0.0, 8.0, 0.0, 8.0),
                         child: Text('Lozinka'),
                       ),
-                      TextField(
+                      TextFormField(
                         obscureText: true,
                         decoration: InputDecoration(
                           border: OutlineInputBorder(),
                           hintText: "Unesite vasu lozinku",
+                        ),
+                        validator: (String? value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Molimo unesite lozinku';
+                          }
+                          return null;
+                        },
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(0.0, 20.0, 0.0, 0.0),
+                        child: Center(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute<void>(
+                                  builder: (context) => HomePage(ime: ime))
+                              );
+                            }, 
+                            child: Text('Prijavi se')),
                         ),
                       ),
                     ]
