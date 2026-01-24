@@ -438,7 +438,12 @@ class ParkingCard extends StatelessWidget {
                   ],
                 ),
                 ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => ParkingSpaceSelectionDialog(parking: parking),
+                    );
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.deepPurple,
                   ),
@@ -451,5 +456,220 @@ class ParkingCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class ParkingSpaceSelectionDialog extends StatefulWidget {
+  final ParkingListing parking;
+
+  const ParkingSpaceSelectionDialog({super.key, required this.parking});
+
+  @override
+  State<ParkingSpaceSelectionDialog> createState() => _ParkingSpaceSelectionDialogState();
+}
+
+class _ParkingSpaceSelectionDialogState extends State<ParkingSpaceSelectionDialog> {
+  // Parse available spaces (e.g., "45/200" -> 45 available, 200 total)
+  late int availableSpaces;
+  late int totalSpaces;
+  late List<ParkingSpace> spaces;
+  int? selectedSpaceId;
+
+  @override
+  void initState() {
+    super.initState();
+    final parts = widget.parking.available.split('/');
+    availableSpaces = int.parse(parts[0]);
+    totalSpaces = int.parse(parts[1]);
+    
+    // Generate parking spaces with random statuses
+    spaces = List.generate(totalSpaces, (index) {
+      final spaceId = index + 1;
+      // Distribute spaces: available (green), reserved (orange), occupied (red)
+      if (index < availableSpaces) {
+        return ParkingSpace(id: spaceId, status: SpaceStatus.available);
+      } else if (index < availableSpaces + (totalSpaces - availableSpaces) ~/ 2) {
+        return ParkingSpace(id: spaceId, status: SpaceStatus.reserved);
+      } else {
+        return ParkingSpace(id: spaceId, status: SpaceStatus.occupied);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: Container(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.parking.name,
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      widget.parking.address,
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ],
+                ),
+                IconButton(
+                  icon: Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            SizedBox(height: 16),
+            
+            // Legend
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  LegendItem(color: Colors.green, label: 'Dostupno (${availableSpaces})'),
+                  LegendItem(color: Colors.orange, label: 'Rezervisano'),
+                  LegendItem(color: Colors.red, label: 'Zauzeto'),
+                ],
+              ),
+            ),
+            
+            // Parking spaces grid
+            Expanded(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: GridView.builder(
+                    shrinkWrap: true,
+                    physics: NeverScrollableScrollPhysics(),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 10,
+                      crossAxisSpacing: 8,
+                      mainAxisSpacing: 8,
+                      childAspectRatio: 1,
+                    ),
+                    itemCount: spaces.length,
+                    itemBuilder: (context, index) {
+                      final space = spaces[index];
+                      return GestureDetector(
+                        onTap: space.status == SpaceStatus.available
+                            ? () {
+                                setState(() => selectedSpaceId = space.id);
+                              }
+                            : null,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: space.status == SpaceStatus.available
+                                ? Colors.green
+                                : space.status == SpaceStatus.reserved
+                                    ? Colors.orange
+                                    : Colors.red,
+                            borderRadius: BorderRadius.circular(8),
+                            border: selectedSpaceId == space.id
+                                ? Border.all(color: Colors.black, width: 3)
+                                : null,
+                          ),
+                          child: Center(
+                            child: Text(
+                              '${space.id}',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+            
+            SizedBox(height: 16),
+            
+            // Action buttons
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.grey.shade400,
+                    foregroundColor: Colors.black,
+                  ),
+                  child: Text('Otkaži'),
+                ),
+                ElevatedButton(
+                  onPressed: selectedSpaceId != null
+                      ? () {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Mjesto broj $selectedSpaceId je rezervisano'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        }
+                      : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.deepPurple,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: Text('Nastavi sa Rezervacijom'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class LegendItem extends StatelessWidget {
+  final Color color;
+  final String label;
+
+  const LegendItem({super.key, required this.color, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 16,
+          height: 16,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        SizedBox(width: 8),
+        Text(label, style: TextStyle(fontSize: 11)),
+      ],
+    );
+  }
+}
+
+enum SpaceStatus {
+  available,
+  reserved,
+  occupied,
+}
+
+class ParkingSpace {
+  final int id;
+  final SpaceStatus status;
+
+  ParkingSpace({required this.id, required this.status});
 }
 
