@@ -1204,10 +1204,7 @@ class _ParkingSpaceSelectionDialogState
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  LegendItem(
-                    color: Colors.green,
-                    label: 'Dostupno (${availableSpaces})',
-                  ),
+                  LegendItem(color: Colors.green, label: 'Dostupno ($availableSpaces)'),
                   LegendItem(color: Colors.orange, label: 'Rezervisano'),
                   LegendItem(color: Colors.red, label: 'Zauzeto'),
                 ],
