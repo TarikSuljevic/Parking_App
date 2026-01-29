@@ -1,6 +1,4 @@
-import 'dart:ffi';
-import 'dart:math';
-
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -28,9 +26,98 @@ class MyApp extends StatelessWidget {
 class MyAppState extends ChangeNotifier {
   // Application state variables and methods go here
   List<Rezervacija> rezervacije = [];
+  Map<String, Set<int>> reservedSpaces = {};
+  String? currentUser;
+
+  void setCurrentUser(String name) {
+    currentUser = name;
+    notifyListeners();
+  }
+
   void dodajRezervaciju(Rezervacija r) {
     rezervacije.add(r);
     notifyListeners();
+  }
+
+  void reserveSpace(String parkingName, int mjesto) {
+    reservedSpaces.putIfAbsent(parkingName, () => <int>{}).add(mjesto);
+    notifyListeners();
+  }
+
+  bool isSpaceOccupied(String parkingName, int mjesto) {
+    return reservedSpaces[parkingName]?.contains(mjesto) ?? false;
+  }
+
+  Rezervacija? aktivnaRezervacija() {
+    try {
+      return rezervacije.firstWhere((r) => r.status == 'aktivna');
+    } catch (e) {
+      return null;
+    }
+  }
+
+  void cancelReservation(Rezervacija r) {
+    final idx = rezervacije.indexWhere((x) => x.parkingName == r.parkingName && x.mjestoBroj == r.mjestoBroj && x.datum == r.datum);
+    if (idx != -1) {
+      rezervacije[idx] = Rezervacija(
+        status: 'otkazana',
+        datum: r.datum,
+        prihod: r.prihod,
+        parkingName: r.parkingName,
+        mjestoBroj: r.mjestoBroj,
+        expiresAt: r.expiresAt,
+        arrived: r.arrived,
+        durationHours: r.durationHours,
+        arrivedUntil: r.arrivedUntil,
+        username: r.username,
+        cancelledAt: DateTime.now(),
+      );
+      reservedSpaces[r.parkingName]?.remove(r.mjestoBroj);
+      notifyListeners();
+    }
+  }
+
+  void markArrived(Rezervacija r) {
+    final idx = rezervacije.indexWhere((x) => x.parkingName == r.parkingName && x.mjestoBroj == r.mjestoBroj && x.datum == r.datum);
+    if (idx != -1) {
+      final mins = (r.durationHours * 60).round();
+      final arrivalEnd = DateTime.now().add(Duration(minutes: mins));
+      rezervacije[idx] = Rezervacija(
+        status: r.status,
+        datum: r.datum,
+        prihod: r.prihod,
+        parkingName: r.parkingName,
+        mjestoBroj: r.mjestoBroj,
+        expiresAt: r.expiresAt,
+        arrived: true,
+        durationHours: r.durationHours,
+        arrivedUntil: arrivalEnd,
+        username: r.username,
+        cancelledAt: r.cancelledAt,
+      );
+      notifyListeners();
+    }
+  }
+
+  void finishReservation(Rezervacija r) {
+    final idx = rezervacije.indexWhere((x) => x.parkingName == r.parkingName && x.mjestoBroj == r.mjestoBroj && x.datum == r.datum);
+    if (idx != -1) {
+      rezervacije[idx] = Rezervacija(
+        status: 'zavrsena',
+        datum: r.datum,
+        prihod: r.prihod,
+        parkingName: r.parkingName,
+        mjestoBroj: r.mjestoBroj,
+        expiresAt: r.expiresAt,
+        arrived: r.arrived,
+        durationHours: r.durationHours,
+        arrivedUntil: r.arrivedUntil,
+        username: r.username,
+        cancelledAt: r.cancelledAt,
+      );
+      reservedSpaces[r.parkingName]?.remove(r.mjestoBroj);
+      notifyListeners();
+    }
   }
 
   int get aktivnoSada {
@@ -386,7 +473,7 @@ class AdminInputPage extends StatefulWidget {
   State<AdminInputPage> createState() => _AdminInputPageState();
 }
 
-late String ime = '';
+String ime = '';
 
 class _AdminInputPageState extends State<AdminInputPage> {
   final _formKey = GlobalKey<FormState>();
@@ -580,11 +667,28 @@ class Rezervacija {
   final String status; // "aktivna", "otkazana", "zavrsena"
   final DateTime datum;
   final double prihod;
+  final String parkingName;
+  final int mjestoBroj;
+  final DateTime expiresAt;
+  final bool arrived;
+  final double durationHours;
+  final DateTime? arrivedUntil;
+  final String username;
+  final DateTime? cancelledAt;
+  
 
   Rezervacija({
     required this.status,
     required this.datum,
     required this.prihod,
+    required this.parkingName,
+    required this.mjestoBroj,
+    required this.expiresAt,
+    this.arrived = false,
+    required this.durationHours,
+    this.arrivedUntil,
+    required this.username,
+    this.cancelledAt,
   });
 }
 
@@ -604,7 +708,6 @@ class AdminPage extends StatefulWidget {
 }
 
 class _AdminPageState extends State<AdminPage> {
-  @override
 Widget buildCard(String title, String value, IconData icon) {
   return Container(
     margin: EdgeInsets.all(8),
@@ -643,6 +746,7 @@ Widget buildCard(String title, String value, IconData icon) {
 
 
 
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
@@ -745,7 +849,7 @@ Widget buildCard(String title, String value, IconData icon) {
                 ),
               ),
             ),
-            Container(
+            SizedBox(
               height: 125,
               child: Consumer<MyAppState>(
                 builder: (context, state, child) {
@@ -797,6 +901,9 @@ Widget buildCard(String title, String value, IconData icon) {
 class _HomePageState extends State<HomePage> {
   String selectedTab = 'search';
   String sortBy = 'Udaljenost';
+
+
+
 
   final List<ParkingListing> parkings = [
     ParkingListing(
@@ -870,6 +977,14 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Active reservation banner
+            Consumer<MyAppState>(builder: (context, state, child) {
+              final rez = state.aktivnaRezervacija();
+              return rez != null && rez.status == 'aktivna'
+                  ? ReservationBanner(rezervacija: rez)
+                  : SizedBox.shrink();
+            }),
+
             // Tab buttons
             Padding(
               padding: const EdgeInsets.all(16.0),
@@ -926,6 +1041,49 @@ class _HomePageState extends State<HomePage> {
             SizedBox(height: 16),
 
             // Sort dropdown
+
+            // Cancellations history (bottom)
+            Consumer<MyAppState>(builder: (context, state, child) {
+              final cancelled = state.rezervacije.where((r) => r.status == 'otkazana').toList().reversed.toList();
+              if (cancelled.isEmpty) return SizedBox.shrink();
+              return Container(
+                width: double.infinity,
+                margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Historija otkaza', style: TextStyle(fontWeight: FontWeight.bold)),
+                    SizedBox(height: 8),
+                    ...cancelled.map((r) {
+                      final cancelledTime = r.cancelledAt?.toLocal().toString() ?? 'Nepoznato';
+                      return Card(
+                        margin: EdgeInsets.only(bottom: 8),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(r.parkingName, style: TextStyle(fontWeight: FontWeight.bold)),
+                              SizedBox(height: 4),
+                              Text('Mjesto #${r.mjestoBroj}'),
+                              SizedBox(height: 4),
+                              Text('Otkačeno: $cancelledTime'),
+                              SizedBox(height: 2),
+                              Text('Vrijeme odabrano: ${r.durationHours} h'),
+                            ],
+                          ),
+                        ),
+                      );
+                    })
+                  ],
+                ),
+              );
+            }),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Row(
@@ -1087,7 +1245,7 @@ class ParkingCard extends StatelessWidget {
                       style: TextStyle(color: Colors.grey, fontSize: 12),
                     ),
                     Text(
-                      parking.pricePerHour.toString(),
+                      '${parking.pricePerHour.toString()} KM',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
@@ -1146,9 +1304,14 @@ class _ParkingSpaceSelectionDialogState
     availableSpaces = int.parse(parts[0]);
     totalSpaces = int.parse(parts[1]);
 
-    // Generate parking spaces with random statuses
+    // Generate parking spaces with statuses and respect global reservations
+    final reservedSet = Provider.of<MyAppState>(context, listen: false).reservedSpaces[widget.parking.name] ?? <int>{};
     spaces = List.generate(totalSpaces, (index) {
       final spaceId = index + 1;
+      // If the space was reserved/occupied by a confirmed reservation, mark it occupied
+      if (reservedSet.contains(spaceId)) {
+        return ParkingSpace(id: spaceId, status: SpaceStatus.occupied);
+      }
       // Distribute spaces: available (green), reserved (orange), occupied (red)
       if (index < availableSpaces) {
         return ParkingSpace(id: spaceId, status: SpaceStatus.available);
@@ -1281,15 +1444,7 @@ class _ParkingSpaceSelectionDialogState
                   onPressed: selectedSpaceId != null
                       ? () {
                           Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Mjesto broj $selectedSpaceId je rezervisano',
-                              ),
-                              backgroundColor: Colors.green,
-                            ),
-                          );
-                          Navigator.push(context, MaterialPageRoute( builder: (context) => HomePage(ime: ime),),);
+                          Navigator.push(context, MaterialPageRoute( builder: (context) => RezervacijaPage(parking: widget.parking, mjestoBroj: selectedSpaceId!),),);
                         }
                       : null,
                   style: ElevatedButton.styleFrom(
@@ -1341,103 +1496,350 @@ class ParkingSpace {
   ParkingSpace({required this.id, required this.status});
 }
 
+class RezervacijaPage extends StatefulWidget {
+  final ParkingListing parking;
+  final int mjestoBroj;
 
-//AI SLOP MOZDA POMOGNE PREGLEDAJ
+  RezervacijaPage({required this.parking, required this.mjestoBroj});
 
-// class RezervacijaPage extends StatefulWidget {
-//   final ParkingListing parking;
-//   final int mjestoBroj;
+  @override
+  State<RezervacijaPage> createState() => _RezervacijaPageState();
+}
+class _RezervacijaPageState extends State<RezervacijaPage> {
+  double trajanjeSati = 1.0;
+  TextEditingController customController = TextEditingController();
 
-//   RezervacijaPage({required this.parking, required this.mjestoBroj});
+  @override
+  Widget build(BuildContext context) {
+    double ukupnaCijena = widget.parking.pricePerHour * trajanjeSati;
 
-//   @override
-//   State<RezervacijaPage> createState() => _RezervacijaPageState();
-// }
-// class _RezervacijaPageState extends State<RezervacijaPage> {
-//   double trajanjeSati = 1.0;
-//   TextEditingController customController = TextEditingController();
+    return Scaffold(
+      appBar: AppBar(title: Text("Rezerviši Parking Mjesto")),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Parking: ${widget.parking.name}", style: TextStyle(fontSize: 20)),
+            Text("Mjesto: #${widget.mjestoBroj}"),
+            Text("Adresa: ${widget.parking.address}"),
+            Wrap(
+              spacing: 8,
+              children: widget.parking.features.map((f) => Chip(label: Text(f))).toList(),
+            ),
+            SizedBox(height: 20),
+            Text("Očekivano Vrijeme Parkinga (Opcionalno)", style: TextStyle(fontWeight: FontWeight.bold)),
+            Wrap(
+              spacing: 8,
+              children: [0.5, 1, 2, 3, 4, 6, 8, 12].map((h) {
+                return ChoiceChip(
+                  label: Text("${h}h"),
+                  selected: trajanjeSati == h,
+                  onSelected: (_) {
+                    setState(() {
+                      trajanjeSati = h.toDouble();
+                      customController.clear();
+                    });
+                  },
+                );
+              }).toList(),
+            ),
+            SizedBox(height: 10),
+            Text("Ili unesite prilagođeno trajanje (sati):"),
+            TextField(
+              controller: customController,
+              keyboardType: TextInputType.number,
+              onChanged: (value) {
+                final parsed = double.tryParse(value);
+                if (parsed != null) {
+                  setState(() {
+                    trajanjeSati = parsed;
+                  });
+                }
+              },
+              decoration: InputDecoration(hintText: "npr. 2.5"),
+            ),
+            SizedBox(height: 20),
+            Text("Ukupno: ${ukupnaCijena.toStringAsFixed(2)} KM", style: TextStyle(fontSize: 18)),
+            Spacer(),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context); // otkaži
+                  },
+                  child: Text("Otkaži"),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    _showPaymentDialog(context, ukupnaCijena);
+                  },
+                  child: Text("Nastavi na plaćanje"),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-//   @override
-//   Widget build(BuildContext context) {
-//     double ukupnaCijena = widget.parking.pricePerHour * trajanjeSati;
+  void _showPaymentDialog(BuildContext context, double amount) {
+    final cardController = TextEditingController();
+    final nameController = TextEditingController();
+    final expiryController = TextEditingController();
+    final cvvController = TextEditingController();
 
-//     return Scaffold(
-//       appBar: AppBar(title: Text("Rezerviši Parking Mjesto")),
-//       body: Padding(
-//         padding: const EdgeInsets.all(16.0),
-//         child: Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: [
-//             Text("Parking: ${widget.parking.name}", style: TextStyle(fontSize: 20)),
-//             Text("Mjesto: #${widget.mjestoBroj}"),
-//             Text("Adresa: ${widget.parking.address}"),
-//             Wrap(
-//               spacing: 8,
-//               children: widget.parking.features.map((f) => Chip(label: Text(f))).toList(),
-//             ),
-//             SizedBox(height: 20),
-//             Text("Očekivano Vrijeme Parkinga (Opcionalno)", style: TextStyle(fontWeight: FontWeight.bold)),
-//             Wrap(
-//               spacing: 8,
-//               children: [0.5, 1, 2, 3, 4, 6, 8, 12].map((h) {
-//                 return ChoiceChip(
-//                   label: Text("${h}h"),
-//                   selected: trajanjeSati == h,
-//                   onSelected: (_) {
-//                     setState(() {
-//                       trajanjeSati = h.toDouble();
-//                       customController.clear();
-//                     });
-//                   },
-//                 );
-//               }).toList(),
-//             ),
-//             SizedBox(height: 10),
-//             Text("Ili unesite prilagođeno trajanje (sati):"),
-//             TextField(
-//               controller: customController,
-//               keyboardType: TextInputType.number,
-//               onChanged: (value) {
-//                 final parsed = double.tryParse(value);
-//                 if (parsed != null) {
-//                   setState(() {
-//                     trajanjeSati = parsed;
-//                   });
-//                 }
-//               },
-//               decoration: InputDecoration(hintText: "npr. 2.5"),
-//             ),
-//             SizedBox(height: 20),
-//             Text("Ukupno: ${ukupnaCijena.toStringAsFixed(2)} KM", style: TextStyle(fontSize: 18)),
-//             Spacer(),
-//             Row(
-//               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-//               children: [
-//                 ElevatedButton(
-//                   onPressed: () {
-//                     Navigator.pop(context); // otkaži
-//                   },
-//                   child: Text("Otkaži"),
-//                 ),
-//                 ElevatedButton(
-//                   onPressed: () {
-//                     final novaRezervacija = Rezervacija(
-//                       status: "aktivna",
-//                       datum: DateTime.now(),
-//                       prihod: ukupnaCijena,
-//                     );
-//                     Provider.of<MyAppState>(context, listen: false)
-//                         .dodajRezervaciju(novaRezervacija);
-//                     Navigator.push(context,
-//                       MaterialPageRoute(builder: (_) => Placeholder()));
-//                   },
-//                   child: Text("Nastavi na Plaćanje"),
-//                 ),
-//               ],
-//             ),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-// }
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.lock, color: Colors.green),
+              SizedBox(width: 8),
+              Text('Sigurno Plaćanje'),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Summary box
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Parking Lokacija:'),
+                          Text(widget.parking.name),
+                        ],
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Parking Mjesto:'),
+                          Text('#${widget.mjestoBroj}'),
+                        ],
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Iznos za Plaćanje:'),
+                          Text('${amount.toStringAsFixed(2)} KM', style: TextStyle(color: Colors.blue)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 12),
+                TextField(
+                  controller: cardController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(labelText: 'Broj Kartice'),
+                ),
+                TextField(
+                  controller: nameController,
+                  decoration: InputDecoration(labelText: 'Ime na Kartici'),
+                ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: expiryController,
+                        decoration: InputDecoration(labelText: 'Datum Isteka'),
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: cvvController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(labelText: 'CVV'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: Text('Otkaži')),
+            ElevatedButton(
+              onPressed: () {
+                final provider = Provider.of<MyAppState>(context, listen: false);
+                final novaRez = Rezervacija(
+                  status: 'aktivna',
+                  datum: DateTime.now(),
+                  prihod: amount,
+                  parkingName: widget.parking.name,
+                  mjestoBroj: widget.mjestoBroj,
+                  expiresAt: DateTime.now().add(Duration(minutes: 30)),
+                  durationHours: trajanjeSati,
+                  username: provider.currentUser ?? 'Nepoznato',
+                );
+                Provider.of<MyAppState>(context, listen: false).dodajRezervaciju(novaRez);
+                Provider.of<MyAppState>(context, listen: false).reserveSpace(widget.parking.name, widget.mjestoBroj);
+                Navigator.pop(context); 
+                Navigator.pop(context); 
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Uspješno rezervisano mjesto #${widget.mjestoBroj}')));
+              },
+              child: Text('Plati ${amount.toStringAsFixed(2)} KM'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class ReservationBanner extends StatefulWidget {
+  final Rezervacija rezervacija;
+  const ReservationBanner({super.key, required this.rezervacija});
+
+  @override
+  State<ReservationBanner> createState() => _ReservationBannerState();
+}
+
+class _ReservationBannerState extends State<ReservationBanner> {
+  late Duration remaining;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _updateRemaining();
+    _timer = Timer.periodic(Duration(seconds: 1), (_) {
+      _updateRemaining();
+      if (remaining.inSeconds <= 0) {
+        // expire reservation
+        final provider = Provider.of<MyAppState>(context, listen: false);
+        provider.cancelReservation(widget.rezervacija);
+        _timer?.cancel();
+      }
+    });
+  }
+
+  void _updateRemaining() {
+    setState(() {
+      if (widget.rezervacija.arrived && widget.rezervacija.arrivedUntil != null) {
+        remaining = widget.rezervacija.arrivedUntil!.difference(DateTime.now());
+      } else {
+        remaining = widget.rezervacija.expiresAt.difference(DateTime.now());
+      }
+      if (remaining.isNegative) remaining = Duration.zero;
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  String _format(Duration d) {
+    final mm = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final ss = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    final hh = d.inHours.toString().padLeft(2, '0');
+    if (d.inHours > 0) return '$hh:$mm:$ss';
+    return '$mm:$ss';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = Provider.of<MyAppState>(context, listen: false);
+    final rez = widget.rezervacija;
+    final isArrived = rez.arrived && rez.arrivedUntil != null;
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(12),
+      margin: EdgeInsets.fromLTRB(16, 12, 16, 8),
+      decoration: BoxDecoration(
+        color: Colors.deepPurple.shade50,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(rez.parkingName, style: TextStyle(fontWeight: FontWeight.bold)),
+                SizedBox(height: 4),
+                Text('Mjesto #${rez.mjestoBroj}'),
+                SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.timer, size: 16, color: Colors.red),
+                    SizedBox(width: 6),
+                    Text(isArrived ? 'Preostalo vrijeme: ${_format(remaining)}' : 'Vrijeme za dolazak: ${_format(remaining)}', style: TextStyle(color: Colors.red)),
+                  ],
+                ),
+                if (rez.arrived)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Text('Dolazak potvrđen ✅', style: TextStyle(color: Colors.green)),
+                  ),
+              ],
+            ),
+          ),
+
+          if (!isArrived) ...[
+            IconButton(
+              onPressed: rez.arrived
+                  ? null
+                  : () async {
+                      final confirmed = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: Text('Skeniraj QR kod'),
+                          content: Text('Simulirajte skeniranje QR koda da potvrdite dolazak.'),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.pop(context, false), child: Text('Otkaži')),
+                            ElevatedButton(onPressed: () => Navigator.pop(context, true), child: Text('Potvrdi dolazak')),
+                          ],
+                        ),
+                      );
+                      if (confirmed == true) {
+                        provider.markArrived(rez);
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Dolazak potvrđen.')));
+                      }
+                    },
+              icon: Icon(Icons.qr_code_scanner, color: rez.arrived ? Colors.grey : Colors.deepPurple),
+            ),
+
+            TextButton(
+              onPressed: () async {
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: Text('Otkaži rezervaciju'),
+                    content: Text('Da li želite otkazati rezervaciju mjesta #${rez.mjestoBroj}?'),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.pop(context, false), child: Text('Ne')),
+                      ElevatedButton(onPressed: () => Navigator.pop(context, true), child: Text('Da')),
+                    ],
+                  ),
+                );
+                if (confirm == true) {
+                  provider.cancelReservation(rez);
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Rezervacija otkazana.')));
+                }
+              },
+              child: Text('Otkaži', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
