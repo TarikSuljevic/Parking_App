@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/services.dart';
+
 
 void main() {
   runApp(MyApp());
@@ -1641,29 +1643,50 @@ class _RezervacijaPageState extends State<RezervacijaPage> {
                   ),
                 ),
                 SizedBox(height: 12),
-                TextField(
+                TextFormField(
                   controller: cardController,
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(labelText: 'Broj Kartice'),
+                  maxLength: 16,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                  ],
+                  validator: (value) {
+                    if (value == null || value.length != 16) {
+                      return 'Unesite validan broj kartice';
+                    }
+                    return null;
+                  },
                 ),
-                TextField(
+                TextFormField(
                   controller: nameController,
                   decoration: InputDecoration(labelText: 'Ime na Kartici'),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
+                  ],
                 ),
                 Row(
                   children: [
                     Expanded(
-                      child: TextField(
+                      child: TextFormField(
                         controller: expiryController,
                         decoration: InputDecoration(labelText: 'Datum Isteka'),
+                        maxLength: 4,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
                       ),
                     ),
                     SizedBox(width: 8),
                     Expanded(
-                      child: TextField(
+                      child: TextFormField(
                         controller: cvvController,
                         keyboardType: TextInputType.number,
                         decoration: InputDecoration(labelText: 'CVV'),
+                        maxLength: 3,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
                       ),
                     ),
                   ],
