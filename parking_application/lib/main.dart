@@ -1516,72 +1516,93 @@ class _RezervacijaPageState extends State<RezervacijaPage> {
     double ukupnaCijena = widget.parking.pricePerHour * trajanjeSati;
 
     return Scaffold(
-      appBar: AppBar(title: Text("Rezerviši Parking Mjesto")),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text("Parking: ${widget.parking.name}", style: TextStyle(fontSize: 20)),
-            Text("Mjesto: #${widget.mjestoBroj}"),
-            Text("Adresa: ${widget.parking.address}"),
-            Wrap(
-              spacing: 8,
-              children: widget.parking.features.map((f) => Chip(label: Text(f))).toList(),
-            ),
-            SizedBox(height: 20),
-            Text("Očekivano Vrijeme Parkinga (Opcionalno)", style: TextStyle(fontWeight: FontWeight.bold)),
-            Wrap(
-              spacing: 8,
-              children: [0.5, 1, 2, 3, 4, 6, 8, 12].map((h) {
-                return ChoiceChip(
-                  label: Text("${h}h"),
-                  selected: trajanjeSati == h,
-                  onSelected: (_) {
-                    setState(() {
-                      trajanjeSati = h.toDouble();
-                      customController.clear();
-                    });
-                  },
-                );
-              }).toList(),
-            ),
-            SizedBox(height: 10),
-            Text("Ili unesite prilagođeno trajanje (sati):"),
-            TextField(
-              controller: customController,
-              keyboardType: TextInputType.number,
-              onChanged: (value) {
-                final parsed = double.tryParse(value);
-                if (parsed != null) {
-                  setState(() {
-                    trajanjeSati = parsed;
-                  });
-                }
-              },
-              decoration: InputDecoration(hintText: "npr. 2.5"),
-            ),
-            SizedBox(height: 20),
-            Text("Ukupno: ${ukupnaCijena.toStringAsFixed(2)} KM", style: TextStyle(fontSize: 18)),
-            Spacer(),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context); // otkaži
-                  },
-                  child: Text("Otkaži"),
+     
+      body: Center(
+        child: SizedBox(
+          height:600,
+          width:450,
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Container(
+              
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                          
+                  children: [
+                    Container(
+                      color: Color.fromARGB(255, 255, 255, 255),
+                      child: Column(
+                        children: [
+                        Text("Parking: ${widget.parking.name}", style: TextStyle(fontSize: 20)),
+                        Text("Mjesto: #${widget.mjestoBroj}"),
+                        Text("Adresa: ${widget.parking.address}"),
+                        Wrap(
+                          spacing: 8,
+                          children: widget.parking.features.map((f) => Chip(label: Text(f))).toList(),
+                        ),]
+                      )
+
+                        ),
+                        SizedBox(height: 20),
+                        Text("Očekivano Vrijeme Parkinga (Opcionalno)", style: TextStyle(fontWeight: FontWeight.bold)),
+                        Wrap(
+                          spacing: 8,
+                          children: [0.5, 1, 2, 3, 4, 6, 8, 12].map((h) {
+                            return ChoiceChip(
+                              label: Text("${h}h"),
+                              selected: trajanjeSati == h,
+                              onSelected: (_) {
+                                setState(() {
+                                  trajanjeSati = h.toDouble();
+                                  customController.clear();
+                                });
+                              },
+                            );
+                          }).toList(),
+                        ),
+                        SizedBox(height: 10),
+                        Text("Ili unesite prilagođeno trajanje (sati):"),
+                        TextField(
+                          controller: customController,
+                          keyboardType: TextInputType.number,
+                          onChanged: (value) {
+                            final parsed = double.tryParse(value);
+                            if (parsed != null) {
+                              setState(() {
+                                trajanjeSati = parsed;
+                              });
+                            }
+                          },
+                          decoration: InputDecoration(hintText: "npr. 2.5"),
+                        ),
+                        SizedBox(height: 20),
+                        Text("Ukupno: ${ukupnaCijena.toStringAsFixed(2)} KM", style: TextStyle(fontSize: 18)),
+                        Spacer(),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            ElevatedButton(
+                              onPressed: () {
+                                Navigator.pop(context); // otkaži
+                              },
+                              child: Text("Otkaži"),
+                            ),
+                            ElevatedButton(
+                              onPressed: () {
+                                _showPaymentDialog(context, ukupnaCijena);
+                              },
+                              child: Text("Nastavi na plaćanje"),
+                            ),
+                          ],
+                        ),
+                      ],
+                    
+                 
                 ),
-                ElevatedButton(
-                  onPressed: () {
-                    _showPaymentDialog(context, ukupnaCijena);
-                  },
-                  child: Text("Nastavi na plaćanje"),
-                ),
-              ],
+              ),
             ),
-          ],
+          ),
         ),
       ),
     );
