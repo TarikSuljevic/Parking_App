@@ -15,12 +15,37 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (context) => MyAppState(),
-      child: MaterialApp(
-        theme: ThemeData(
+      child: Consumer<MyAppState>(builder: (context, state, child) {
+        // Light theme (keeps default feel)
+        final lightTheme = ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepOrange),
-        ),
-        home: LoginPage(),
-      ),
+          scaffoldBackgroundColor: Colors.white,
+        );
+
+        // Dark theme: dark-gray (not pure black) and soft white text
+        final darkBackground = Color(0xFF111827); // dark slate gray
+        final softWhite = Color(0xFFe6eef6); // soft white with slight blue tint
+        final darkTheme = ThemeData.dark().copyWith(
+          scaffoldBackgroundColor: darkBackground,
+          canvasColor: darkBackground,
+          cardColor: Color(0xFF1f2937),
+          dialogBackgroundColor: Color(0xFF111827),
+          textTheme: ThemeData.dark().textTheme.apply(
+                bodyColor: softWhite.withOpacity(0.9),
+                displayColor: softWhite.withOpacity(0.95),
+              ),
+          appBarTheme: AppBarTheme(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            foregroundColor: softWhite.withOpacity(0.95),
+          ),
+        );
+
+        return MaterialApp(
+          theme: state.isDarkMode ? darkTheme : lightTheme,
+          home: LoginPage(),
+        );
+      }),
     );
   }
 }
@@ -149,6 +174,37 @@ class MyAppState extends ChangeNotifier {
     }
     return total;
   }
+
+  // Theme mode: true = dark, false = light
+  bool isDarkMode = true;
+
+  void toggleTheme() {
+    isDarkMode = !isDarkMode;
+    notifyListeners();
+  }
+
+  // Saved payment card (for demo purposes only -- do NOT store real cards like this in production)
+  Map<String, String>? savedCard;
+
+  void saveCard({required String number, required String name, required String expiry}) {
+    // store masked number and meta
+    final cleaned = number.replaceAll(' ', '');
+    final last4 = cleaned.length >= 4 ? cleaned.substring(cleaned.length - 4) : cleaned;
+    savedCard = {
+      'masked': '**** **** **** $last4',
+      'number': cleaned,
+      'name': name,
+      'expiry': expiry,
+    };
+    notifyListeners();
+  }
+
+  bool get hasSavedCard => savedCard != null;
+
+  void clearSavedCard() {
+    savedCard = null;
+    notifyListeners();
+  }
 }
 
 class LoginPage extends StatelessWidget {
@@ -215,11 +271,11 @@ class LoginPage extends StatelessWidget {
                           SizedBox(width: 40),
                           Text(
                             'Korisnicka prijava',
-                            style: TextStyle(color: Colors.black),
+                            style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
                           ),
                           Text(
                             'Pronadite i rezervisite parking mjesta u blizini',
-                            style: TextStyle(color: Colors.black54),
+                            style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.8)),
                           ),
                         ],
                       ),
@@ -255,11 +311,11 @@ class LoginPage extends StatelessWidget {
                           SizedBox(width: 40),
                           Text(
                             'Administratorska prijava',
-                            style: TextStyle(color: Colors.black),
+                            style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
                           ),
                           Text(
                             'Upravljajte parking objektima i rezervacijama',
-                            style: TextStyle(color: Colors.black54),
+                            style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.8)),
                           ),
                         ],
                       ),
@@ -283,182 +339,118 @@ class UserInputPage extends StatefulWidget {
 }
 
 class _UserInputPageState extends State<UserInputPage> {
-  late String ime = '';
+  String ime = ''; // Sklonjen 'late' jer inicijalizuješ odmah praznim stringom
   final _formKey = GlobalKey<FormState>();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(automaticallyImplyLeading: false),
       body: Center(
-        child: Card(
-          margin: EdgeInsets.symmetric(horizontal: 560, vertical: 5),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(12.0, 100.0, 12.0, 12.0),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      BackButton(
-                        // child:
-                      ),
-                      Text("Nazad"),
-                    ],
-                  ),
-                  Icon(
-                    Icons.supervised_user_circle_rounded,
-                    color: Colors.deepPurple,
-                    size: 55,
-                  ),
-                  SizedBox(width: 40),
-                  Text(
-                    'Korisnicka prijava',
-                    style: TextStyle(color: Colors.black),
-                  ),
-                  Text(
-                    'Unesite vase podatke za nastavak',
-                    style: TextStyle(color: Colors.black54),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(30.0, 20.0, 30.0, 0.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+        child: SingleChildScrollView( // Dodano da aplikacija ne puca na malim ekranima
+          child: Card(
+            // Smanjen horizontalni margin jer je 560 previše za većinu ekrana
+            margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 5), 
+            child: Padding(
+              padding: const EdgeInsets.all(24.0), // Normalizovan padding
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min, // Card će se skupiti oko sadržaja
+                  children: [
+                    Row(
                       children: [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(
-                            0.0,
-                            0.0,
-                            0.0,
-                            8.0,
-                          ),
-                          child: Text('Ime'),
-                        ),
-                        TextFormField(
-                          decoration: InputDecoration(
-                            border: OutlineInputBorder(),
-                            hintText: "Unesite vase ime",
-                          ),
-                          validator: (String? value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Molimo unesite ime';
-                            }
-                            return null;
-                          },
-                          onChanged: (value) {
-                            ime = value;
-                          },
-                          onFieldSubmitted: (value) {
-                            if (_formKey.currentState!.validate()) {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => HomePage(ime: ime),
-                                ),
-                              );
-                            }
-                          },
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(
-                            0.0,
-                            8.0,
-                            0.0,
-                            8.0,
-                          ),
-                          child: Text('Email'),
-                        ),
-                        TextFormField(
-                          decoration: InputDecoration(
-                            border: OutlineInputBorder(),
-                            hintText: "Unesite vas email",
-                          ),
-                          validator: (String? value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Molimo unesite email';
-                            }
-                            int indexOf = value.indexOf(("@"));
-                            if (indexOf == -1) {
-                              return "Email mora sadržavati @";
-                            }
-                            if (indexOf == value.length - 1) {
-                              return "Molimo unesite znak nakon @";
-                            }
-                            return null;
-                          },
-                          onFieldSubmitted: (value) {
-                            if (_formKey.currentState!.validate()) {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => HomePage(ime: ime),
-                                ),
-                              );
-                            }
-                          },
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(
-                            0.0,
-                            8.0,
-                            0.0,
-                            8.0,
-                          ),
-                          child: Text('Lozinka'),
-                        ),
-                        TextFormField(
-                          obscureText: true,
-                          decoration: InputDecoration(
-                            border: OutlineInputBorder(),
-                            hintText: "Unesite vasu lozinku",
-                          ),
-                          validator: (String? value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Molimo unesite lozinku';
-                            }
-                            return null;
-                          },
-                          onFieldSubmitted: (value) {
-                            if (_formKey.currentState!.validate()) {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => HomePage(ime: ime),
-                                ),
-                              );
-                            }
-                          },
-                        ),
-                        // builder: (context) => HomePage(ime: ime))
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(
-                            0.0,
-                            20.0,
-                            0.0,
-                            0.0,
-                          ),
-                          child: Center(
-                            child: ElevatedButton(
-                              onPressed: () {
-                                if (_formKey.currentState!.validate()) {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute<void>(
-                                      builder: (context) => HomePage(ime: ime),
-                                    ),
-                                  );
-                                }
-                              },
-
-                              child: Text('Prijavi se'),
-                            ),
-                          ),
-                        ),
+                        BackButton(onPressed: () => Navigator.pop(context)),
+                        const Text("Nazad"),
                       ],
                     ),
-                  ),
-                ],
+                    const Icon(
+                      Icons.supervised_user_circle_rounded,
+                      color: Colors.deepPurple,
+                      size: 55,
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Korisnička prijava',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    Text(
+                      'Unesite vaše podatke za nastavak',
+                      style: TextStyle(
+                        color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.6),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    
+                    // IME POLJE
+                    TextFormField(
+                      decoration: const InputDecoration(
+                        labelText: 'Ime',
+                        border: OutlineInputBorder(),
+                        hintText: "Unesite vaše ime",
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) return 'Molimo unesite ime';
+                        return null;
+                      },
+                      onChanged: (value) => ime = value,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // EMAIL POLJE
+                    TextFormField(
+                      decoration: const InputDecoration(
+                        labelText: 'Email',
+                        border: OutlineInputBorder(),
+                        hintText: "Unesite vaš email",
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) return 'Molimo unesite email';
+                        if (!value.contains('@')) return "Email mora sadržavati @";
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // LOZINKA POLJE
+                    TextFormField(
+                      obscureText: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Lozinka',
+                        border: OutlineInputBorder(),
+                        hintText: "Unesite vašu lozinku",
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) return 'Molimo unesite lozinku';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 24),
+
+                    // DUGME ZA PRIJAVU
+                    SizedBox(
+                      width: double.infinity, // Dugme preko cijele širine card-a
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.deepPurple,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 15),
+                        ),
+                        onPressed: () {
+                          if (_formKey.currentState!.validate()) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => HomePage(ime: ime),
+                              ),
+                            );
+                          }
+                        },
+                        child: const Text('Prijavi se'),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -512,11 +504,11 @@ class _AdminInputPageState extends State<AdminInputPage> {
                   SizedBox(width: 40),
                   Text(
                     'Administratorska prijava',
-                    style: TextStyle(color: Colors.black),
+                    style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
                   ),
                   Text(
                     'Unesite vase podatke za nastavak',
-                    style: TextStyle(color: Colors.black54),
+                    style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.8)),
                   ),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(30.0, 20.0, 30.0, 0.0),
@@ -710,202 +702,722 @@ class AdminPage extends StatefulWidget {
 }
 
 class _AdminPageState extends State<AdminPage> {
-Widget buildCard(String title, String value, IconData icon) {
-  return Container(
-    margin: EdgeInsets.all(8),
-    padding: EdgeInsets.all(12),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
+  String selectedTab = 'pregled';
+
+  // Track disabled parking locations by name (placeholder state)
+  Set<String> disabledParkings = {};
+  final List<ParkingListing> parkings = [
+    ParkingListing(
+      name: 'Tržni Centar Parking',
+      address: '180/300 zauzeto',
+      features: ['Pokriveno', 'EV Punjenje', '24/7 Obezbedjenje'],
+      available: '180/300',
+      pricePerHour: 12.0,
     ),
-    child: Row(
-      children: [
-        Container(
-          height: 50,
-          width: 50,
-          decoration: BoxDecoration(
-            color: Colors.deepPurple,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icon, color: Colors.white),
-        ),
-        SizedBox(width: 12),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(0, 10, 0, 0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: TextStyle(fontSize: 14, color: Colors.black)),
-              Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.deepPurple)),
-            ],
-          ),
-        ),
-      ],
+    ParkingListing(
+      name: 'Gradska Garaža',
+      address: '138/150 zauzeto',
+      features: ['Pokriveno', 'Valet Usluga', 'Autopraonica'],
+      available: '138/150',
+      pricePerHour: 13.38,
     ),
-  );
-}
-
-
-
+    ParkingListing(
+      name: 'Parking Centar Grada',
+      address: '155/200 zauzeto',
+      features: ['Na otvorenom', 'Video nadzor'],
+      available: '155/200',
+      pricePerHour: 8.07,
+    ),
+    ParkingListing(
+      name: 'Metro Stanica Parking',
+      address: '75/80 zauzeto',
+      features: ['Pokriveno', 'WC', 'Kafić'],
+      available: '75/80',
+      pricePerHour: 12.27,
+    ),
+    ParkingListing(
+      name: 'Parking kod Rijeke',
+      address: '22/100 zauzeto',
+      features: ['Na otvorenom', 'Roštilj'],
+      available: '22/100',
+      pricePerHour: 17.52,
+    ),
+  ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-            colors: [
-              Color(0xFF6A00F4), // vibrant ljubičasta
-              Color(0xFF0A0A60), // duboka plava
-            ],
-          ),
-        ),
-
-        child: Column(
+      appBar: AppBar(
+        backgroundColor: Color(0xFF7C3AED),
+        elevation: 0,
+        automaticallyImplyLeading: false,
+        title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: EdgeInsets.fromLTRB(10, 20, 0, 0),
-              child: Row(
-                children: [
-                  Text(
-                    "ParkEasy Admin",
-                    style: TextStyle(
-                      fontSize: 40,
-                      color: Color.fromARGB(255, 255, 255, 255),
-                    ),
-                  ),
-
-                  Spacer(),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(0, 0, 10, 0),
-                    child: Container(
-                      height: 40,
-                      width: 120,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(15),
-                        gradient: LinearGradient(
-                          begin: Alignment.centerLeft,
-                          end: Alignment.centerRight,
-                          colors: [
-                            Color.fromARGB(
-                              255,
-                              197,
-                              37,
-                              255,
-                            ), // vibrant ljubičasta
-                            Color.fromARGB(255, 0, 81, 255), // duboka plava
-                          ],
-                        ),
-                      ),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                        child: TextButton(
-                          onPressed: () {
-                            Navigator.pushAndRemoveUntil(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => LoginPage(),
-                              ),
-                              (route) => false,
-                            );
-                          },
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              Icon(
-                                Icons.logout,
-                                color: Color.fromARGB(255, 255, 255, 255),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  "Odjavi se",
-                                  style: TextStyle(
-                                    color: Color.fromARGB(255, 255, 255, 255),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+            Text(
+              'ParkEasy Admin',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
               ),
             ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(10, 0, 0, 0),
-              child: Text(
-                "Dobrodošli nazad, ${widget.ime} ",
-                style: TextStyle(
-                  fontSize: 20,
-                  color: Color.fromARGB(255, 255, 255, 255),
-                ),
-              ),
-            ),
-            SizedBox(
-              height: 125,
-              child: Consumer<MyAppState>(
-                builder: (context, state, child) {
-                  return Row(
-                    children: [
-                      Expanded(
-                        child: buildCard(
-                          "Aktivno sada",
-                          state.aktivnoSada.toString(),
-                          Icons.person_outline,
-                        ),
-                      ),
-                      Expanded(
-                        child: buildCard(
-                          "Danas",
-                          state.danas.toString(),
-                          Icons.calendar_today_outlined,
-                        ),
-                      ),
-                      Expanded(
-                        child: buildCard(
-                          "Završeno",
-                          state.zavrseno.toString(),
-                          Icons.show_chart,
-                        ),
-                      ),
-                      Expanded(
-                        child: buildCard(
-                          "Prihod",
-                          "\$${state.prihod.toStringAsFixed(2)}",
-                          Icons.attach_money,
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ),
-            Expanded(
-              child: Container(color: Color.fromARGB(255, 255, 255, 255)),
+            Text(
+              'Dobrodošli nazad, ${widget.ime}',
+              style: TextStyle(color: Colors.white70, fontSize: 12),
             ),
           ],
         ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                Icon(Icons.brightness_4, color: Colors.white),
+                SizedBox(width: 16),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute<void>(
+                        builder: (context) => LoginPage(),
+                      ),
+                      (route) => false,
+                    );
+                  },
+                  icon: Icon(Icons.logout, size: 16),
+                  label: Text('Odjavi se'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Color(0xFF7C3AED),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
+      body: Consumer<MyAppState>(
+        builder: (context, state, child) {
+          return SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Stats Cards
+                Container(
+                  color: Color(0xFF7C3AED),
+                  padding: EdgeInsets.all(16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      buildCard('Aktivno Sada', state.aktivnoSada.toString(), Icons.people),
+                      buildCard('Danas', state.danas.toString(), Icons.calendar_today),
+                      buildCard('Završeno', '0', Icons.check_circle),
+                      buildCard('Prihod', '\$${state.prihod.toStringAsFixed(2)}', Icons.attach_money),
+                    ],
+                  ),
+                ),
+
+                // Tabs
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    children: [
+                      _buildTab('Pregled', 'pregled'),
+                      SizedBox(width: 8),
+                      _buildTab('Rezervacije', 'rezervacije'),
+                      SizedBox(width: 8),
+                      _buildTab('Parking Objekti', 'parking'),
+                    ],
+                  ),
+                ),
+
+                // Content
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: selectedTab == 'pregled'
+                      ? _buildPregledTab(state)
+                      : selectedTab == 'rezervacije'
+                          ? _buildRezervacijeTab(state)
+                          : _buildParkingTab(state),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildTab(String label, String value) {
+    return ElevatedButton(
+      onPressed: () => setState(() => selectedTab = value),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: selectedTab == value ? Color(0xFF7C3AED) : Colors.grey.shade300,
+        foregroundColor: selectedTab == value ? Colors.white : Colors.black,
+        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      ),
+      child: Text(label),
+    );
+  }
+
+  AlertDialog _buildDisableDialog(String parkingName) {
+    return AlertDialog(
+      title: Text('Onemogući Lokaciju'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          RichText(
+            text: TextSpan(
+              children: [
+                TextSpan(
+                  text: 'Da li ste sigurni da želite onemogućiti lokaciju ',
+                  style: TextStyle(color: Color(0xFF7C3AED), fontSize: 14),
+                ),
+                TextSpan(
+                  text: parkingName + '?',
+                  style: TextStyle(color: Colors.black, fontSize: 14, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: 20),
+          Text('Razlog Onemogućavanja', style: TextStyle(fontSize: 12, color: Colors.grey)),
+          SizedBox(height: 8),
+          TextField(
+            decoration: InputDecoration(
+              border: OutlineInputBorder(),
+              filled: true,
+              fillColor: Colors.grey.shade100,
+              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            ),
+            onChanged: (value) {},
+            maxLines: 3,
+          ),
+        ],
+      ),
+      actions: [
+        ElevatedButton(
+          onPressed: () => Navigator.pop(context),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.grey.shade300,
+            foregroundColor: Colors.black,
+          ),
+          child: Text('Odustani'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            setState(() {
+              disabledParkings.add(parkingName);
+            });
+            Navigator.pop(context);
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+          child: Text('Onemogući'),
+        ),
+      ],
+    );
+  }
+
+  AlertDialog _buildAddLocationDialog() {
+    String locationName = '';
+    String numPlaces = '';
+    return AlertDialog(
+      title: Text('Dodaj Novu Lokaciju'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Naziv Lokacije', style: TextStyle(fontSize: 12, color: Colors.grey)),
+          SizedBox(height: 8),
+          TextField(
+            decoration: InputDecoration(
+              border: OutlineInputBorder(),
+              filled: true,
+              fillColor: Colors.grey.shade100,
+              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            ),
+            onChanged: (value) => locationName = value,
+          ),
+          SizedBox(height: 16),
+          Text('Broj Mjesta', style: TextStyle(fontSize: 12, color: Colors.grey)),
+          SizedBox(height: 8),
+          TextField(
+            decoration: InputDecoration(
+              border: OutlineInputBorder(),
+              filled: true,
+              fillColor: Colors.grey.shade100,
+              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            ),
+            keyboardType: TextInputType.number,
+            onChanged: (value) => numPlaces = value,
+          ),
+        ],
+      ),
+      actions: [
+        ElevatedButton(
+          onPressed: () => Navigator.pop(context),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.grey.shade300,
+            foregroundColor: Colors.black,
+          ),
+          child: Text('Odustani'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            if (locationName.isNotEmpty && numPlaces.isNotEmpty) {
+              setState(() {
+                parkings.add(
+                  ParkingListing(
+                    name: locationName,
+                    address: '0/$numPlaces zauzeto',
+                    features: ['Nova lokacija'],
+                    available: '0/$numPlaces',
+                    pricePerHour: 10.0,
+                  ),
+                );
+              });
+              Navigator.pop(context);
+            }
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Color(0xFF7C3AED),
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+          child: Text('Dodaj'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPregledTab(MyAppState state) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Nedavne Aktivnosti
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Nedavne Aktivnosti', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              SizedBox(height: 12),
+              if (state.rezervacije.isEmpty)
+                Text('Nema nedavnih aktivnosti')
+              else
+                ...state.rezervacije.take(5).map((r) => Card(
+                  margin: EdgeInsets.only(bottom: 8),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('${r.parkingName} - Mjesto #${r.mjestoBroj}', 
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                              SizedBox(height: 4),
+                              Text(r.datum.toLocal().toString(), 
+                                style: TextStyle(fontSize: 12, color: Colors.grey)),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: r.status == 'aktivna' ? Colors.green.shade200 : 
+                                   r.status == 'zavrsena' ? Colors.blue.shade200 :
+                                   Colors.red.shade200,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(r.status,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: r.status == 'aktivna' ? Colors.green.shade800 :
+                                     r.status == 'zavrsena' ? Colors.blue.shade800 :
+                                     Colors.red.shade800,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )),
+            ],
+          ),
+        ),
+        SizedBox(width: 24),
+        // Najbolje Lokacije
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Najbolje Lokacije', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              SizedBox(height: 12),
+              ...parkings.map((parking) => Card(
+                margin: EdgeInsets.only(bottom: 8),
+                child: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(parking.name, style: TextStyle(fontWeight: FontWeight.bold)),
+                          Text(parking.address, style: TextStyle(fontSize: 12, color: Colors.grey)),
+                        ],
+                      ),
+                      Text(
+                        '\$${(double.parse(parking.available.split('/')[0]) * parking.pricePerHour).toStringAsFixed(2)}',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF7C3AED)),
+                      ),
+                    ],
+                  ),
+                ),
+              )),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRezervacijeTab(MyAppState state) {
+    final sve = state.rezervacije;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Sve Rezervacije', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        SizedBox(height: 12),
+        Container(
+          width: double.infinity,
+          padding: EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8)],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(height: 12),
+              // header row
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Row(
+                  children: [
+                    Expanded(child: Text('ID', style: TextStyle(fontWeight: FontWeight.bold))),
+                    Expanded(child: Text('Lokacija', style: TextStyle(fontWeight: FontWeight.bold))),
+                    Expanded(child: Text('Početak', style: TextStyle(fontWeight: FontWeight.bold))),
+                    Expanded(child: Text('Trajanje', style: TextStyle(fontWeight: FontWeight.bold))),
+                    Expanded(child: Text('Iznos', style: TextStyle(fontWeight: FontWeight.bold))),
+                    Expanded(child: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
+                  ],
+                ),
+              ),
+              Divider(),
+              // content: either placeholder message or list
+              if (sve.isEmpty)
+                SizedBox(
+                  height: 140,
+                  child: Center(
+                    child: Text('Još nema rezervacija', style: TextStyle(color: Colors.grey)),
+                  ),
+                )
+              else
+                ...sve.map((r) {
+                  final idNumber = r.datum.year.toString() +
+                      r.datum.month.toString().padLeft(2, '0') +
+                      r.datum.day.toString().padLeft(2, '0') +
+                      r.mjestoBroj.toString().padLeft(3, '0');
+                  final dateLocal = r.datum.toLocal();
+                  final month = dateLocal.month;
+                  final day = dateLocal.day;
+                  final year = dateLocal.year;
+                  final hour = dateLocal.hour;
+                  final minute = dateLocal.minute.toString().padLeft(2, '0');
+                  final second = dateLocal.second.toString().padLeft(2, '0');
+                  final ampm = hour >= 12 ? 'PM' : 'AM';
+                  final display12Hour = (hour % 12 == 0 ? 12 : hour % 12).toString();
+                  final formattedTime = '$month/$day/$year, $display12Hour:$minute:$second $ampm';
+
+                  return Card(
+                    margin: EdgeInsets.symmetric(vertical: 8),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Row(
+                        children: [
+                          Expanded(child: Text('#$idNumber', maxLines: 1, overflow: TextOverflow.ellipsis, softWrap: false)),
+                          Expanded(child: Text('${r.parkingName} - Mjesto #${r.mjestoBroj}')),
+                          Expanded(child: Text(formattedTime)),
+                          Expanded(child: Text('${r.durationHours.toStringAsFixed(0)}h')),
+                          Expanded(child: Text('\$${r.prihod.toStringAsFixed(2)}')),
+                          Expanded(
+                            child: Container(
+                              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: r.status == 'aktivna'
+                                    ? Colors.green.shade100
+                                    : r.status == 'zavrsena'
+                                        ? Colors.blue.shade100
+                                        : Colors.red.shade100,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  r.status[0].toUpperCase() + r.status.substring(1),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: r.status == 'aktivna'
+                                        ? Colors.green.shade800
+                                        : r.status == 'zavrsena'
+                                            ? Colors.blue.shade800
+                                            : Colors.red.shade800,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildParkingTab(MyAppState state) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            ElevatedButton.icon(
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  barrierColor: Color(0xFF1A237E),
+                  barrierDismissible: false,
+                  builder: (context) => _buildAddLocationDialog(),
+                );
+              },
+              icon: Icon(Icons.add),
+              label: Text('Dodaj Novu Lokaciju'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFF7C3AED),
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 12),
+        Wrap(
+          spacing: 18,
+          runSpacing: 18,
+          children: parkings.map((p) {
+            final parts = p.available.split('/');
+            final occupied = int.tryParse(parts[0]) ?? 0;
+            final total = int.tryParse(parts.length > 1 ? parts[1] : '1') ?? 1;
+            final percent = (total > 0) ? (occupied / total) : 0.0;
+            final disabled = disabledParkings.contains(p.name);
+
+            return SizedBox(
+              width: 360,
+              child: Opacity(
+                opacity: disabled ? 0.6 : 1.0,
+                child: Card(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: Colors.deepPurple.shade100,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(Icons.directions_car, color: Colors.deepPurple),
+                            ),
+                            SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(p.name, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                  SizedBox(height: 4),
+                                  Text('${p.available} mjesta', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 12),
+                        Text('Popunjenost', style: TextStyle(color: Colors.grey)),
+                        SizedBox(height: 6),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: LinearProgressIndicator(
+                            value: percent,
+                            minHeight: 10,
+                            backgroundColor: Colors.grey.shade300,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                                percent > 0.85 ? Colors.red : (percent > 0.5 ? Colors.orange : Colors.green)),
+                          ),
+                        ),
+                        SizedBox(height: 6),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('${(percent * 100).round()}%'),
+                            Text('\$${(occupied * p.pricePerHour).toStringAsFixed(2)}', style: TextStyle(color: Color(0xFF7C3AED))),
+                          ],
+                        ),
+                        SizedBox(height: 12),
+                        ElevatedButton(
+                          onPressed: () {
+                            if (disabled) {
+                              // Re-enable immediately
+                              setState(() {
+                                disabledParkings.remove(p.name);
+                              });
+                            } else {
+                              // Show disable confirmation dialog
+                              showDialog(
+                                context: context,
+                                barrierColor: Color(0xFF1A237E),
+                                barrierDismissible: false,
+                                builder: (context) => _buildDisableDialog(p.name),
+                              );
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: disabled ? Colors.green : Colors.red,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            minimumSize: Size(double.infinity, 44),
+                          ),
+                          child: Text(disabled ? 'Omogući' : 'Onemogući'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 }
 
+Widget buildCard(String title, String value, IconData icon) {
+    return Container(
+      width: 250,
+      margin: EdgeInsets.all(8),
+      padding: EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4)],
+      ),
+      child: Row(
+        children: [
+          Container(
+            height: 50,
+            width: 50,
+            decoration: BoxDecoration(
+              color: Color(0xFF1A1A2E),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: Colors.white, size: 28),
+          ),
+          SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(title, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+              Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+
 class _HomePageState extends State<HomePage> {
   String selectedTab = 'search';
   String sortBy = 'Udaljenost';
+  late TextEditingController _searchController;
 
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController();
+  }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
+  List<ParkingListing> get filteredAndSortedParkings {
+    List<ParkingListing> filtered = parkings.where((p) {
+      final searchText = _searchController.text.toLowerCase();
+      return p.name.toLowerCase().contains(searchText) ||
+             p.address.toLowerCase().contains(searchText);
+    }).toList();
+
+    // Sortiraj po odabranoj opciji
+    switch (sortBy) {
+      case 'Cijena':
+        filtered.sort((a, b) => a.pricePerHour.compareTo(b.pricePerHour));
+        break;
+      case 'Dostupnost':
+        filtered.sort((a, b) {
+          final aParts = a.available.split('/');
+          final bParts = b.available.split('/');
+          final aOccupied = int.tryParse(aParts[0]) ?? 0;
+          final bOccupied = int.tryParse(bParts[0]) ?? 0;
+          final aTotal = int.tryParse(aParts.length > 1 ? aParts[1] : '1') ?? 1;
+          final bTotal = int.tryParse(bParts.length > 1 ? bParts[1] : '1') ?? 1;
+          final aFree = aTotal - aOccupied;
+          final bFree = bTotal - bOccupied;
+          return bFree.compareTo(aFree); // više slobodnih mjesta = prvo
+        });
+        break;
+      case 'Udaljenost':
+      default:
+        // Simulacija - u pravoj aplikaciji koristiti Google Maps API
+        // Za sada drži originalnu listu
+        break;
+    }
+
+    return filtered;
+  }
 
   final List<ParkingListing> parkings = [
     ParkingListing(
@@ -935,12 +1447,11 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.white,
         elevation: 0,
         title: Text(
           'ParkEasy',
           style: TextStyle(
-            color: Colors.black,
+            color: Theme.of(context).textTheme.headlineSmall?.color,
             fontSize: 24,
             fontWeight: FontWeight.bold,
           ),
@@ -952,9 +1463,19 @@ class _HomePageState extends State<HomePage> {
               children: [
                 Text(
                   'Dobrodošli, ${widget.ime}',
-                  style: TextStyle(color: Colors.black54),
+                  style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.9)),
                 ),
-                SizedBox(width: 16),
+                SizedBox(width: 12),
+                // Theme toggle placed between welcome and logout
+                Consumer<MyAppState>(builder: (context, s, _) {
+                  return IconButton(
+                    tooltip: s.isDarkMode ? 'Switch to light' : 'Switch to dark',
+                    onPressed: () => s.toggleTheme(),
+                    icon: Icon(s.isDarkMode ? Icons.light_mode : Icons.dark_mode),
+                    color: s.isDarkMode ? Colors.yellow[600] : Theme.of(context).iconTheme.color,
+                  );
+                }),
+                SizedBox(width: 8),
                 TextButton(
                   onPressed: () {
                     Navigator.pushAndRemoveUntil(
@@ -992,19 +1513,19 @@ class _HomePageState extends State<HomePage> {
               padding: const EdgeInsets.all(16.0),
               child: Row(
                 children: [
-                  ElevatedButton.icon(
-                    onPressed: () => setState(() => selectedTab = 'search'),
-                    icon: Icon(Icons.search),
-                    label: Text('Pretraži Parking'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: selectedTab == 'search'
-                          ? Colors.deepPurple
-                          : Colors.grey.shade300,
-                      foregroundColor: selectedTab == 'search'
-                          ? Colors.white
-                          : Colors.black,
-                    ),
-                  ),
+                      ElevatedButton.icon(
+                        onPressed: () => setState(() => selectedTab = 'search'),
+                        icon: Icon(Icons.search),
+                        label: Text('Pretraži Parking'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: selectedTab == 'search'
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context).cardColor,
+                          foregroundColor: selectedTab == 'search'
+                              ? Colors.white
+                              : Theme.of(context).textTheme.bodyMedium?.color,
+                        ),
+                      ),
                   SizedBox(width: 12),
                   ElevatedButton.icon(
                     onPressed: () => setState(() => selectedTab = 'map'),
@@ -1012,118 +1533,188 @@ class _HomePageState extends State<HomePage> {
                     label: Text('Prikaz Mape'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: selectedTab == 'map'
-                          ? Colors.deepPurple
-                          : Colors.grey.shade300,
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context).cardColor,
                       foregroundColor: selectedTab == 'map'
                           ? Colors.white
-                          : Colors.black,
+                          : Theme.of(context).textTheme.bodyMedium?.color,
                     ),
                   ),
                 ],
               ),
             ),
 
-            // Search bar
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: TextField(
-                decoration: InputDecoration(
-                  hintText:
-                      'Pretražite po lokaciji, adresi ili nazivu parkinga...',
-                  prefixIcon: Icon(Icons.search, color: Colors.grey),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
+            if (selectedTab == 'search') ...[
+              // Search bar
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (value) {
+                    setState(() {});
+                  },
+                  decoration: InputDecoration(
+                    hintText:
+                        'Pretražite po lokaciji, adresi ili nazivu parkinga...',
+                    prefixIcon: Icon(Icons.search, color: Colors.grey),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    contentPadding: EdgeInsets.symmetric(vertical: 12),
                   ),
-                  contentPadding: EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
-            ),
 
-            SizedBox(height: 16),
+              SizedBox(height: 16),
 
-            // Sort dropdown
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    DropdownButton<String>(
+                      value: sortBy,
+                      items: ['Udaljenost', 'Cijena', 'Dostupnost'].map((
+                        String value,
+                      ) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text('Sortiraj po $value'),
+                        );
+                      }).toList(),
+                      onChanged: (String? value) {
+                        if (value != null) {
+                          setState(() => sortBy = value);
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
 
-            // Cancellations history (bottom)
+              SizedBox(height: 16),
+
+              // Parking listings
+              ListView.builder(
+                shrinkWrap: true,
+                physics: NeverScrollableScrollPhysics(),
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                itemCount: filteredAndSortedParkings.length,
+                itemBuilder: (context, index) {
+                  final parking = filteredAndSortedParkings[index];
+                  return ParkingCard(parking: parking);
+                },
+              ),
+            ] else if (selectedTab == 'map') ...[
+              // Simple interactive map placeholder
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Container(
+                  height: 420,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: LayoutBuilder(builder: (context, constraints) {
+                    // sample marker positions (relative) - 5 markers, closer together
+                    // Tighter cluster (zoomed-in look) - 5 markers closer together
+                    final centerX = constraints.maxWidth * 0.48;
+                    final centerY = constraints.maxHeight * 0.4;
+                    final markerPositions = [
+                      Offset(centerX - constraints.maxWidth * 0.06, centerY + constraints.maxHeight * 0.03),
+                      Offset(centerX - constraints.maxWidth * 0.02, centerY - constraints.maxHeight * 0.02),
+                      Offset(centerX + constraints.maxWidth * 0.03, centerY + constraints.maxHeight * 0.02),
+                      Offset(centerX + constraints.maxWidth * 0.08, centerY - constraints.maxHeight * 0.04),
+                      Offset(centerX - constraints.maxWidth * 0.01, centerY - constraints.maxHeight * 0.05),
+                    ];
+                    return Stack(
+                      children: [
+                        // grid background
+                        Positioned.fill(
+                          child: CustomPaint(
+                            painter: _MapGridPainter(),
+                          ),
+                        ),
+                        // markers
+                        for (int i = 0; i < markerPositions.length && i < filteredAndSortedParkings.length; i++)
+                          _MapMarker(
+                            position: markerPositions[i],
+                            parking: filteredAndSortedParkings[i],
+                          ),
+                      ],
+                    );
+                  }),
+                ),
+              ),
+            ],
+            SizedBox(height: 24),
+            // Reservation history (user)
             Consumer<MyAppState>(builder: (context, state, child) {
-              final cancelled = state.rezervacije.where((r) => r.status == 'otkazana').toList().reversed.toList();
-              if (cancelled.isEmpty) return SizedBox.shrink();
+              final history = state.rezervacije.reversed.toList();
+              if (history.isEmpty) return SizedBox.shrink();
               return Container(
                 width: double.infinity,
                 margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                padding: EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(8),
-                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Historija otkaza', style: TextStyle(fontWeight: FontWeight.bold)),
-                    SizedBox(height: 8),
-                    ...cancelled.map((r) {
-                      final cancelledTime = r.cancelledAt?.toLocal().toString() ?? 'Nepoznato';
+                    Text('Istorija Rezervacija', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    SizedBox(height: 12),
+                    ...history.map((r) {
+                      final isDark = Theme.of(context).brightness == Brightness.dark;
+                      Color badgeColor;
+                      String statusLabel;
+                      Color statusTextColor = Theme.of(context).textTheme.bodySmall?.color ?? Colors.black87;
+                      if (r.status == 'aktivna') {
+                        badgeColor = isDark ? Colors.green[800]!.withOpacity(0.2) : Colors.green.shade100;
+                        statusLabel = 'Aktivna';
+                        statusTextColor = isDark ? Colors.white.withOpacity(0.95) : Colors.black87;
+                      } else if (r.status == 'otkazana') {
+                        badgeColor = isDark ? Colors.red[800]!.withOpacity(0.18) : Colors.red.shade100;
+                        statusLabel = 'Otkazana';
+                        statusTextColor = isDark ? Colors.white.withOpacity(0.95) : Colors.black87;
+                      } else {
+                        badgeColor = isDark ? Colors.blueGrey[700]!.withOpacity(0.14) : Colors.blue.shade50;
+                        statusLabel = 'Završena';
+                        statusTextColor = isDark ? Colors.white.withOpacity(0.95) : Colors.black87;
+                      }
+
+                      final when = r.datum.toLocal().toString();
+                      final amount = r.prihod.toStringAsFixed(2);
                       return Card(
                         margin: EdgeInsets.only(bottom: 8),
                         child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Column(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(r.parkingName, style: TextStyle(fontWeight: FontWeight.bold)),
-                              SizedBox(height: 4),
-                              Text('Mjesto #${r.mjestoBroj}'),
-                              SizedBox(height: 4),
-                              Text('Otkačeno: $cancelledTime'),
-                              SizedBox(height: 2),
-                              Text('Vrijeme odabrano: ${r.durationHours} h'),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('${r.parkingName} - Mjesto #${r.mjestoBroj}', style: TextStyle(fontWeight: FontWeight.bold)),
+                                    SizedBox(height: 6),
+                                    Text(when, style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.75))),
+                                    SizedBox(height: 6),
+                                    Text('Trajanje: ${r.durationHours} sat(a) • \$${amount}'),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(color: badgeColor, borderRadius: BorderRadius.circular(20)),
+                                child: Text(statusLabel, style: TextStyle(color: statusTextColor)),
+                              ),
                             ],
                           ),
                         ),
                       );
-                    })
+                    }).toList(),
                   ],
                 ),
               );
             }),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  DropdownButton<String>(
-                    value: sortBy,
-                    items: ['Udaljenost', 'Cijena', 'Dostupnost'].map((
-                      String value,
-                    ) {
-                      return DropdownMenuItem<String>(
-                        value: value,
-                        child: Text('Sortiraj po $value'),
-                      );
-                    }).toList(),
-                    onChanged: (String? value) {
-                      if (value != null) {
-                        setState(() => sortBy = value);
-                      }
-                    },
-                  ),
-                ],
-              ),
-            ),
-
-            SizedBox(height: 16),
-
-            // Parking listings
-            ListView.builder(
-              shrinkWrap: true,
-              physics: NeverScrollableScrollPhysics(),
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              itemCount: parkings.length,
-              itemBuilder: (context, index) {
-                final parking = parkings[index];
-                return ParkingCard(parking: parking);
-              },
-            ),
           ],
         ),
       ),
@@ -1154,8 +1745,19 @@ class ParkingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 1. Move theme logic up here to avoid nested Builders and fix the 'iconBg' error
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
+    // Define colors once
+    final iconBgColor = isDark 
+        ? Colors.deepPurple.shade700.withOpacity(0.14) 
+        : Colors.deepPurple.shade100;
+    final primaryColor = theme.colorScheme.primary;
+    final chipBgColor = isDark ? Colors.grey.shade800 : Colors.grey.shade200;
+
     return Card(
-      margin: EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -1165,37 +1767,38 @@ class ParkingCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Fixed: The Container now uses the predefined iconBgColor
                 Container(
                   width: 50,
                   height: 50,
                   decoration: BoxDecoration(
-                    color: Colors.deepPurple.shade100,
+                    color: iconBgColor,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(Icons.directions_car, color: Colors.deepPurple),
+                  child: Icon(Icons.directions_car, color: primaryColor),
                 ),
-                SizedBox(width: 12),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         parking.name,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      SizedBox(height: 4),
+                      const SizedBox(height: 4),
                       Row(
                         children: [
-                          Icon(Icons.location_on, size: 14, color: Colors.grey),
-                          SizedBox(width: 4),
+                          const Icon(Icons.location_on, size: 14, color: Colors.grey),
+                          const SizedBox(width: 4),
                           Expanded(
                             child: Text(
                               parking.address,
                               style: TextStyle(
-                                color: Colors.grey,
+                                color: theme.textTheme.bodySmall?.color?.withOpacity(0.8),
                                 fontSize: 12,
                               ),
                             ),
@@ -1207,18 +1810,23 @@ class ParkingCard extends StatelessWidget {
                 ),
               ],
             ),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             Wrap(
               spacing: 8,
               children: parking.features.map((feature) {
                 return Chip(
-                  label: Text(feature, style: TextStyle(fontSize: 11)),
-                  backgroundColor: Colors.grey.shade200,
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  label: Text(
+                    feature, 
+                    style: TextStyle(fontSize: 11, color: theme.textTheme.bodySmall?.color)
+                  ),
+                  backgroundColor: chipBgColor,
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  // Material 3 chips often need small visual adjustments:
+                  visualDensity: VisualDensity.compact, 
                 );
               }).toList(),
             ),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -1227,14 +1835,14 @@ class ParkingCard extends StatelessWidget {
                   children: [
                     Text(
                       'Dostupno:',
-                      style: TextStyle(color: Colors.grey, fontSize: 12),
+                      style: TextStyle(color: theme.textTheme.bodySmall?.color?.withOpacity(0.8), fontSize: 12),
                     ),
                     Text(
                       parking.available,
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
-                        color: Colors.deepOrange,
+                        color: theme.colorScheme.secondary,
                       ),
                     ),
                   ],
@@ -1242,13 +1850,13 @@ class ParkingCard extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    const Text(
                       'Cijena:',
                       style: TextStyle(color: Colors.grey, fontSize: 12),
                     ),
                     Text(
-                      '${parking.pricePerHour.toString()} KM',
-                      style: TextStyle(
+                      '${parking.pricePerHour} KM', // Simplified string interpolation
+                      style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
                         color: Colors.deepPurple,
@@ -1256,21 +1864,27 @@ class ParkingCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                ElevatedButton(
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (context) =>
-                          ParkingSpaceSelectionDialog(parking: parking),
+                // Using Consumer or Provider directly is cleaner than Builder if possible
+                Consumer<MyAppState>(
+                  builder: (context, appState, child) {
+                    final hasActive = appState.aktivnaRezervacija() != null;
+                    return ElevatedButton(
+                      onPressed: hasActive
+                          ? null
+                          : () => showDialog(
+                                context: context,
+                                builder: (context) => ParkingSpaceSelectionDialog(parking: parking),
+                              ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: hasActive ? Colors.grey.shade400 : Colors.deepPurple,
+                        foregroundColor: Colors.white, // Ensure text is visible
+                      ),
+                      child: const Text(
+                        'Rezerviši Sada',
+                        style: TextStyle(fontSize: 12),
+                      ),
                     );
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.deepPurple,
-                  ),
-                  child: Text(
-                    'Rezerviši Sada',
-                    style: TextStyle(color: Colors.white, fontSize: 12),
-                  ),
                 ),
               ],
             ),
@@ -1278,6 +1892,126 @@ class ParkingCard extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+// Simple map grid painter for placeholder map
+class _MapGridPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = Colors.grey.shade300.withOpacity(0.3)..strokeWidth = 1;
+    final step = 40.0;
+    for (double x = 0; x < size.width; x += step) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    }
+    for (double y = 0; y < size.height; y += step) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _MapMarker extends StatefulWidget {
+  final Offset position;
+  final ParkingListing parking;
+  const _MapMarker({required this.position, required this.parking, Key? key}) : super(key: key);
+
+  @override
+  State<_MapMarker> createState() => _MapMarkerState();
+}
+
+class _MapMarkerState extends State<_MapMarker> {
+  bool hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDisabled = Provider.of<MyAppState>(context).aktivnaRezervacija() != null;
+    // Larger pin sizing for zoomed-in feel
+    final double pinSize = 48.0;
+    return Positioned(
+      left: widget.position.dx - pinSize / 2,
+      top: widget.position.dy - pinSize,
+      child: SizedBox(
+        width: pinSize + 8,
+        height: pinSize + 8,
+        child: Stack(
+          alignment: Alignment.center,
+          clipBehavior: Clip.none,
+          children: [
+            // Info box appears only when hovering over the pin or the box itself
+            if (hover)
+              Positioned(
+                bottom: pinSize + 8,
+                child: MouseRegion(
+                  onEnter: (_) => setState(() => hover = true),
+                  onExit: (_) => setState(() => hover = false),
+                  child: _buildInfoBox(context, isDisabled),
+                ),
+              ),
+            // Pin area: limit hover/tap to the icon only
+            Positioned(
+              bottom: 0,
+              child: MouseRegion(
+                onEnter: (_) => setState(() => hover = true),
+                onExit: (_) => setState(() => hover = false),
+                child: GestureDetector(
+                  onTap: () => setState(() => hover = !hover),
+                  child: _buildColoredPin(widget.parking, pinSize),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoBox(BuildContext context, bool isDisabled) {
+    return Container(
+      width: 240,
+      padding: EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8)],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(widget.parking.name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          SizedBox(height: 6),
+          Text(widget.parking.address, style: TextStyle(color: Colors.grey)),
+          SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Dostupno: ${widget.parking.available}'),
+              Text('\$${widget.parking.pricePerHour}/sat', style: TextStyle(color: Colors.blue)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildColoredPin(ParkingListing p, double size) {
+    // determine availability color (green/yellow/red)
+    Color color = Colors.red;
+    try {
+      final parts = p.available.split('/');
+      final occupied = int.tryParse(parts[0]) ?? 0;
+      final total = int.tryParse(parts.length > 1 ? parts[1] : '1') ?? 1;
+      final free = (total - occupied).clamp(0, total);
+      final ratio = total > 0 ? free / total : 0.0;
+      if (ratio > 0.5) color = Colors.green;
+      else if (ratio > 0.2) color = Colors.orange;
+      else color = Colors.red;
+    } catch (e) {
+      color = Colors.red;
+    }
+
+    return Icon(Icons.location_on, color: color, size: size);
   }
 }
 
@@ -1394,7 +2128,7 @@ class _ParkingSpaceSelectionDialogState
                     itemBuilder: (context, index) {
                       final space = spaces[index];
                       return GestureDetector(
-                        onTap: space.status == SpaceStatus.available
+                        onTap: (space.status == SpaceStatus.available && Provider.of<MyAppState>(context, listen: false).aktivnaRezervacija() == null)
                             ? () {
                                 setState(() => selectedSpaceId = space.id);
                               }
@@ -1443,7 +2177,7 @@ class _ParkingSpaceSelectionDialogState
                   child: Text('Otkaži'),
                 ),
                 ElevatedButton(
-                  onPressed: selectedSpaceId != null
+                  onPressed: (selectedSpaceId != null && Provider.of<MyAppState>(context, listen: false).aktivnaRezervacija() == null)
                       ? () {
                           Navigator.pop(context);
                           Navigator.push(context, MaterialPageRoute( builder: (context) => RezervacijaPage(parking: widget.parking, mjestoBroj: selectedSpaceId!),),);
@@ -1614,135 +2348,275 @@ class _RezervacijaPageState extends State<RezervacijaPage> {
     final expiryController = TextEditingController();
     final cvvController = TextEditingController();
 
+    final provider = Provider.of<MyAppState>(context, listen: false);
+
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: Row(
-            children: [
-              Icon(Icons.lock, color: Colors.green),
-              SizedBox(width: 8),
-              Text('Sigurno Plaćanje'),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+        bool useSaved = provider.hasSavedCard;
+        bool saveNew = false;
+
+        return StatefulBuilder(builder: (context, setState) {
+          return AlertDialog(
+            title: Row(
               children: [
-                // Summary box
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Parking Lokacija:'),
-                          Text(widget.parking.name),
-                        ],
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Parking Mjesto:'),
-                          Text('#${widget.mjestoBroj}'),
-                        ],
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Iznos za Plaćanje:'),
-                          Text('${amount.toStringAsFixed(2)} KM', style: TextStyle(color: Colors.blue)),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(height: 12),
-                TextFormField(
-                  controller: cardController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(labelText: 'Broj Kartice'),
-                  maxLength: 16,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                  ],
-                  validator: (value) {
-                    if (value == null || value.length != 16) {
-                      return 'Unesite validan broj kartice';
-                    }
-                    return null;
-                  },
-                ),
-                TextFormField(
-                  controller: nameController,
-                  decoration: InputDecoration(labelText: 'Ime na Kartici'),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
-                  ],
-                ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: expiryController,
-                        decoration: InputDecoration(labelText: 'Datum Isteka'),
-                        maxLength: 4,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                        ],
-                      ),
-                    ),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: TextFormField(
-                        controller: cvvController,
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(labelText: 'CVV'),
-                        maxLength: 3,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+                Icon(Icons.lock, color: Colors.green),
+                SizedBox(width: 8),
+                Text('Sigurno Plaćanje'),
               ],
             ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: Text('Otkaži')),
-            ElevatedButton(
-              onPressed: () {
-                final provider = Provider.of<MyAppState>(context, listen: false);
-                final novaRez = Rezervacija(
-                  status: 'aktivna',
-                  datum: DateTime.now(),
-                  prihod: amount,
-                  parkingName: widget.parking.name,
-                  mjestoBroj: widget.mjestoBroj,
-                  expiresAt: DateTime.now().add(Duration(minutes: 30)),
-                  durationHours: trajanjeSati,
-                  username: provider.currentUser ?? 'Nepoznato',
-                );
-                Provider.of<MyAppState>(context, listen: false).dodajRezervaciju(novaRez);
-                Provider.of<MyAppState>(context, listen: false).reserveSpace(widget.parking.name, widget.mjestoBroj);
-                Navigator.pop(context); 
-                Navigator.pop(context); 
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Uspješno rezervisano mjesto #${widget.mjestoBroj}')));
-              },
-              child: Text('Plati ${amount.toStringAsFixed(2)} KM'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Summary box
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Parking Lokacija:'),
+                            Text(widget.parking.name),
+                          ],
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Parking Mjesto:'),
+                            Text('#${widget.mjestoBroj}'),
+                          ],
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Iznos za Plaćanje:'),
+                            Text('${amount.toStringAsFixed(2)} KM', style: TextStyle(color: Colors.blue)),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 12),
+                  if (provider.hasSavedCard) ...[
+                    ListTile(
+                      title: Text('Koristi spremljenu karticu'),
+                      subtitle: Text(provider.savedCard?['masked'] ?? ''),
+                      leading: Radio<bool>(
+                        value: true,
+                        groupValue: useSaved,
+                        onChanged: (v) => setState(() => useSaved = true),
+                      ),
+                      trailing: IconButton(
+                        icon: Icon(Icons.delete_outline),
+                        onPressed: () {
+                          provider.clearSavedCard();
+                          setState(() {
+                            useSaved = false;
+                          });
+                        },
+                      ),
+                    ),
+                    ListTile(
+                      title: Text('Unesi novu karticu'),
+                      leading: Radio<bool>(
+                        value: false,
+                        groupValue: useSaved,
+                        onChanged: (v) => setState(() => useSaved = false),
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                  ],
+                  if (!provider.hasSavedCard || !useSaved) ...[
+                    TextFormField(
+                      autocorrect: false,
+                      enableSuggestions: false,
+                      controller: cardController,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(labelText: 'Broj Kartice', counterText: ""),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'[0-9 ]')),
+                        LengthLimitingTextInputFormatter(19),
+                        CardNumberFormatter(),
+                      ],
+                    ),
+                    TextFormField(
+                      controller: nameController,
+                      decoration: InputDecoration(labelText: 'Ime na Kartici'),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: expiryController,
+                            decoration: InputDecoration(labelText: 'Datum Isteka', counterText: ""),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(RegExp(r'[0-9/]')),
+                              LengthLimitingTextInputFormatter(5),
+                              expiryDateNumberFormater(),
+                            ],
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: TextFormField(
+                            controller: cvvController,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(labelText: 'CVV', counterText: ""),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
+                              LengthLimitingTextInputFormatter(3),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: saveNew,
+                          onChanged: (v) => setState(() => saveNew = v ?? false),
+                        ),
+                        SizedBox(width: 8),
+                        Text('Zapamti ovu karticu za kasnije'),
+                      ],
+                    ),
+                  ] else ...[
+                    // showing saved card summary
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Plaćate pomoću:'),
+                          SizedBox(height: 6),
+                          Text(provider.savedCard?['masked'] ?? '', style: TextStyle(fontWeight: FontWeight.bold)),
+                          Text(provider.savedCard?['name'] ?? ''),
+                        ],
+                      ),
+                    ),
+                  ],
+                ]),
             ),
-          ],
-        );
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: Text('Otkaži')),
+              ElevatedButton(
+                onPressed: () {
+                  final appState = Provider.of<MyAppState>(context, listen: false);
+
+                  // If paying with new card and user asked to save it
+                  if ((!appState.hasSavedCard || !useSaved) && saveNew) {
+                    appState.saveCard(
+                      number: cardController.text,
+                      name: nameController.text,
+                      expiry: expiryController.text,
+                    );
+                  }
+
+                  // create reservation
+                  final novaRez = Rezervacija(
+                    status: 'aktivna',
+                    datum: DateTime.now(),
+                    prihod: amount,
+                    parkingName: widget.parking.name,
+                    mjestoBroj: widget.mjestoBroj,
+                    expiresAt: DateTime.now().add(Duration(minutes: 30)),
+                    durationHours: trajanjeSati,
+                    username: appState.currentUser ?? 'Nepoznato',
+                  );
+                  appState.dodajRezervaciju(novaRez);
+                  appState.reserveSpace(widget.parking.name, widget.mjestoBroj);
+                  Navigator.pop(context); // close payment dialog
+                  Navigator.pop(context); // close reservation page
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Uspješno rezervisano mjesto #${widget.mjestoBroj}')));
+                },
+                child: Text('Plati ${amount.toStringAsFixed(2)} KM'),
+              ),
+            ],
+          );
+        });
       },
     );
   }
+}
+
+class expiryDateNumberFormater extends TextInputFormatter{
+  @override 
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ){
+    var text = newValue.text;
+    
+
+    if(newValue.selection.baseOffset == 0){
+      return newValue;
+    }
+
+    var cleanedText = text.replaceAll(RegExp(r'[^0-9]'), '');
+    
+
+    if(cleanedText.length > 4){
+      cleanedText = cleanedText.substring(0, 4);
+    }
+    
+ 
+    var buffer = StringBuffer();
+    for(int i = 0; i < cleanedText.length; i++){
+      buffer.write(cleanedText[i]);
+
+      if(i == 1 && cleanedText.length > 2){
+        buffer.write('/');
+      }
+    }
+    
+    var string = buffer.toString();
+    
+
+    return TextEditingValue(
+      text: string,
+      selection: TextSelection.collapsed(offset: string.length),
+    );
+  }
+}
+
+class CardNumberFormatter extends TextInputFormatter{
+@override 
+TextEditingValue formatEditUpdate(
+  TextEditingValue oldValue,
+  TextEditingValue newValue,
+
+){
+  var text=newValue.text;
+  if(newValue.selection.baseOffset==0){
+    return newValue;
+  }
+  var cleanedText=text.replaceAll(' ', '');
+  var buffer=StringBuffer();
+  for(int i=0;i<cleanedText.length;i++){
+    buffer.write(cleanedText[i]);
+    var index=i+1;
+    if(index%4==0 && index!=cleanedText.length){
+      buffer.write(' ');
+    }
+  }
+var string=buffer.toString();
+return TextEditingValue(
+  text: string,
+  selection: TextSelection.collapsed(offset: string.length),
+);
+}
+
 }
 
 class ReservationBanner extends StatefulWidget {
@@ -1803,12 +2677,16 @@ class _ReservationBannerState extends State<ReservationBanner> {
     final rez = widget.rezervacija;
     final isArrived = rez.arrived && rez.arrivedUntil != null;
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? Color(0xFF1f2937) : Colors.deepPurple.shade50;
+    final headingColor = Theme.of(context).textTheme.bodyMedium?.color;
+
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(12),
       margin: EdgeInsets.fromLTRB(16, 12, 16, 8),
       decoration: BoxDecoration(
-        color: Colors.deepPurple.shade50,
+        color: bg,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -1817,21 +2695,21 @@ class _ReservationBannerState extends State<ReservationBanner> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(rez.parkingName, style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(rez.parkingName, style: TextStyle(fontWeight: FontWeight.bold, color: headingColor)),
                 SizedBox(height: 4),
-                Text('Mjesto #${rez.mjestoBroj}'),
+                Text('Mjesto #${rez.mjestoBroj}', style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.95))),
                 SizedBox(height: 8),
                 Row(
                   children: [
-                    Icon(Icons.timer, size: 16, color: Colors.red),
+                    Icon(Icons.timer, size: 16, color: Colors.redAccent),
                     SizedBox(width: 6),
-                    Text(isArrived ? 'Preostalo vrijeme: ${_format(remaining)}' : 'Vrijeme za dolazak: ${_format(remaining)}', style: TextStyle(color: Colors.red)),
+                    Text(isArrived ? 'Preostalo vrijeme: ${_format(remaining)}' : 'Vrijeme za dolazak: ${_format(remaining)}', style: TextStyle(color: Colors.redAccent)),
                   ],
                 ),
                 if (rez.arrived)
                   Padding(
                     padding: const EdgeInsets.only(top: 8.0),
-                    child: Text('Dolazak potvrđen ✅', style: TextStyle(color: Colors.green)),
+                    child: Text('Dolazak potvrđen ✅', style: TextStyle(color: Colors.greenAccent)),
                   ),
               ],
             ),
@@ -1858,7 +2736,7 @@ class _ReservationBannerState extends State<ReservationBanner> {
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Dolazak potvrđen.')));
                       }
                     },
-              icon: Icon(Icons.qr_code_scanner, color: rez.arrived ? Colors.grey : Colors.deepPurple),
+              icon: Icon(Icons.qr_code_scanner, color: rez.arrived ? Colors.grey : Theme.of(context).colorScheme.primary),
             ),
 
             TextButton(
@@ -1879,7 +2757,7 @@ class _ReservationBannerState extends State<ReservationBanner> {
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Rezervacija otkazana.')));
                 }
               },
-              child: Text('Otkaži', style: TextStyle(color: Colors.red)),
+              child: Text('Otkaži', style: TextStyle(color: Colors.redAccent)),
             ),
           ],
         ],
