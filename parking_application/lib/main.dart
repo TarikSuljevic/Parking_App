@@ -712,6 +712,8 @@ class AdminPage extends StatefulWidget {
 class _AdminPageState extends State<AdminPage> {
   String selectedTab = 'pregled';
 
+  // Track disabled parking locations by name (placeholder state)
+  Set<String> disabledParkings = {};
   final List<ParkingListing> parkings = [
     ParkingListing(
       name: 'Tržni Centar Parking',
@@ -841,7 +843,11 @@ class _AdminPageState extends State<AdminPage> {
                 // Content
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: selectedTab == 'pregled' ? _buildPregledTab(state) : _buildRezervacijeTab(state),
+                  child: selectedTab == 'pregled'
+                      ? _buildPregledTab(state)
+                      : selectedTab == 'rezervacije'
+                          ? _buildRezervacijeTab(state)
+                          : _buildParkingTab(state),
                 ),
               ],
             ),
@@ -860,6 +866,70 @@ class _AdminPageState extends State<AdminPage> {
         padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       ),
       child: Text(label),
+    );
+  }
+
+  AlertDialog _buildDisableDialog(String parkingName) {
+    String reasonText = '';
+    return AlertDialog(
+      title: Text('Onemogući Lokaciju'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          RichText(
+            text: TextSpan(
+              children: [
+                TextSpan(
+                  text: 'Da li ste sigurni da želite onemogućiti lokaciju ',
+                  style: TextStyle(color: Color(0xFF7C3AED), fontSize: 14),
+                ),
+                TextSpan(
+                  text: parkingName + '?',
+                  style: TextStyle(color: Colors.black, fontSize: 14, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: 20),
+          Text('Razlog Onemogućavanja', style: TextStyle(fontSize: 12, color: Colors.grey)),
+          SizedBox(height: 8),
+          TextField(
+            decoration: InputDecoration(
+              border: OutlineInputBorder(),
+              filled: true,
+              fillColor: Colors.grey.shade100,
+              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            ),
+            onChanged: (value) => reasonText = value,
+            maxLines: 3,
+          ),
+        ],
+      ),
+      actions: [
+        ElevatedButton(
+          onPressed: () => Navigator.pop(context),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.grey.shade300,
+            foregroundColor: Colors.black,
+          ),
+          child: Text('Odustani'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            setState(() {
+              disabledParkings.add(parkingName);
+            });
+            Navigator.pop(context);
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+          child: Text('Onemogući'),
+        ),
+      ],
     );
   }
 
@@ -965,39 +1035,42 @@ class _AdminPageState extends State<AdminPage> {
       children: [
         Text('Sve Rezervacije', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         SizedBox(height: 12),
-        if (sve.isEmpty)
-          Text('Nema rezervacija')
-        else
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8)],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // show count for clarity
-        
-                SizedBox(height: 12),
-                // header row
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: Row(
-                    children: [
-                      SizedBox(width: 140, child: Text('ID', style: TextStyle(fontWeight: FontWeight.bold))),
-                      Expanded(child: Text('Lokacija', style: TextStyle(fontWeight: FontWeight.bold))),
-                      SizedBox(width: 180, child: Text('Početak', style: TextStyle(fontWeight: FontWeight.bold))),
-                      SizedBox(width: 80, child: Text('Trajanje', style: TextStyle(fontWeight: FontWeight.bold))),
-                      SizedBox(width: 100, child: Text('Iznos', style: TextStyle(fontWeight: FontWeight.bold))),
-                      SizedBox(width: 100, child: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
-                    ],
-                  ),
+        Container(
+          width: double.infinity,
+          padding: EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8)],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(height: 12),
+              // header row
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Row(
+                  children: [
+                    Expanded(child: Text('ID', style: TextStyle(fontWeight: FontWeight.bold))),
+                    Expanded(child: Text('Lokacija', style: TextStyle(fontWeight: FontWeight.bold))),
+                    Expanded(child: Text('Početak', style: TextStyle(fontWeight: FontWeight.bold))),
+                    Expanded(child: Text('Trajanje', style: TextStyle(fontWeight: FontWeight.bold))),
+                    Expanded(child: Text('Iznos', style: TextStyle(fontWeight: FontWeight.bold))),
+                    Expanded(child: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
+                  ],
                 ),
-                Divider(),
-                // list of reservations
+              ),
+              Divider(),
+              // content: either placeholder message or list
+              if (sve.isEmpty)
+                SizedBox(
+                  height: 140,
+                  child: Center(
+                    child: Text('Još nema rezervacija', style: TextStyle(color: Colors.grey)),
+                  ),
+                )
+              else
                 ...sve.map((r) {
                   final idNumber = r.datum.year.toString() +
                       r.datum.month.toString().padLeft(2, '0') +
@@ -1020,16 +1093,12 @@ class _AdminPageState extends State<AdminPage> {
                       padding: const EdgeInsets.all(12.0),
                       child: Row(
                         children: [
-                          SizedBox(
-                            width: 140,
-                            child: Text('#$idNumber', maxLines: 1, overflow: TextOverflow.ellipsis, softWrap: false),
-                          ),
+                          Expanded(child: Text('#$idNumber', maxLines: 1, overflow: TextOverflow.ellipsis, softWrap: false)),
                           Expanded(child: Text('${r.parkingName} - Mjesto #${r.mjestoBroj}')),
-                          SizedBox(width: 180, child: Text(formattedTime)),
-                          SizedBox(width: 80, child: Text('${r.durationHours.toStringAsFixed(0)}h')),
-                          SizedBox(width: 100, child: Text('\$${r.prihod.toStringAsFixed(2)}')),
-                          SizedBox(
-                            width: 100,
+                          Expanded(child: Text(formattedTime)),
+                          Expanded(child: Text('${r.durationHours.toStringAsFixed(0)}h')),
+                          Expanded(child: Text('\$${r.prihod.toStringAsFixed(2)}')),
+                          Expanded(
                             child: Container(
                               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
@@ -1061,9 +1130,144 @@ class _AdminPageState extends State<AdminPage> {
                     ),
                   );
                 }).toList(),
-              ],
-            ),
+            ],
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildParkingTab(MyAppState state) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            ElevatedButton.icon(
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: Text('Dodaj Novu Lokaciju'),
+                    content: Text('Placeholder za dodavanje nove lokacije.'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: Text('Zatvori'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              icon: Icon(Icons.add),
+              label: Text('Dodaj Novu Lokaciju'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFF7C3AED),
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 12),
+        Wrap(
+          spacing: 18,
+          runSpacing: 18,
+          children: parkings.map((p) {
+            final parts = p.available.split('/');
+            final occupied = int.tryParse(parts[0]) ?? 0;
+            final total = int.tryParse(parts.length > 1 ? parts[1] : '1') ?? 1;
+            final percent = (total > 0) ? (occupied / total) : 0.0;
+            final disabled = disabledParkings.contains(p.name);
+
+            return SizedBox(
+              width: 360,
+              child: Opacity(
+                opacity: disabled ? 0.6 : 1.0,
+                child: Card(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: Colors.deepPurple.shade100,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(Icons.directions_car, color: Colors.deepPurple),
+                            ),
+                            SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(p.name, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                  SizedBox(height: 4),
+                                  Text('${p.available} mjesta', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 12),
+                        Text('Popunjenost', style: TextStyle(color: Colors.grey)),
+                        SizedBox(height: 6),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: LinearProgressIndicator(
+                            value: percent,
+                            minHeight: 10,
+                            backgroundColor: Colors.grey.shade300,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                                percent > 0.85 ? Colors.red : (percent > 0.5 ? Colors.orange : Colors.green)),
+                          ),
+                        ),
+                        SizedBox(height: 6),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('${(percent * 100).round()}%'),
+                            Text('\$${(occupied * p.pricePerHour).toStringAsFixed(2)}', style: TextStyle(color: Color(0xFF7C3AED))),
+                          ],
+                        ),
+                        SizedBox(height: 12),
+                        ElevatedButton(
+                          onPressed: () {
+                            if (disabled) {
+                              // Re-enable immediately
+                              setState(() {
+                                disabledParkings.remove(p.name);
+                              });
+                            } else {
+                              // Show disable confirmation dialog
+                              showDialog(
+                                context: context,
+                                builder: (context) => _buildDisableDialog(p.name),
+                              );
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: disabled ? Colors.green : Colors.red,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            minimumSize: Size(double.infinity, 44),
+                          ),
+                          child: Text(disabled ? 'Omogući' : 'Onemogući'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
       ],
     );
   }
