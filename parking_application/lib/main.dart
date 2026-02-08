@@ -710,195 +710,400 @@ class AdminPage extends StatefulWidget {
 }
 
 class _AdminPageState extends State<AdminPage> {
-Widget buildCard(String title, String value, IconData icon) {
-  return Container(
-    margin: EdgeInsets.all(8),
-    padding: EdgeInsets.all(12),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
+  String selectedTab = 'pregled';
+
+  final List<ParkingListing> parkings = [
+    ParkingListing(
+      name: 'Tržni Centar Parking',
+      address: '180/300 zauzeto',
+      features: ['Pokriveno', 'EV Punjenje', '24/7 Obezbedjenje'],
+      available: '180/300',
+      pricePerHour: 12.0,
     ),
-    child: Row(
-      children: [
-        Container(
-          height: 50,
-          width: 50,
-          decoration: BoxDecoration(
-            color: Colors.deepPurple,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icon, color: Colors.white),
-        ),
-        SizedBox(width: 12),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(0, 10, 0, 0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: TextStyle(fontSize: 14, color: Colors.black)),
-              Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.deepPurple)),
-            ],
-          ),
-        ),
-      ],
+    ParkingListing(
+      name: 'Gradska Garaža',
+      address: '138/150 zauzeto',
+      features: ['Pokriveno', 'Valet Usluga', 'Autopraonica'],
+      available: '138/150',
+      pricePerHour: 13.38,
     ),
-  );
-}
-
-
-
+    ParkingListing(
+      name: 'Parking Centar Grada',
+      address: '155/200 zauzeto',
+      features: ['Na otvorenom', 'Video nadzor'],
+      available: '155/200',
+      pricePerHour: 8.07,
+    ),
+    ParkingListing(
+      name: 'Metro Stanica Parking',
+      address: '75/80 zauzeto',
+      features: ['Pokriveno', 'WC', 'Kafić'],
+      available: '75/80',
+      pricePerHour: 12.27,
+    ),
+    ParkingListing(
+      name: 'Parking kod Rijeke',
+      address: '22/100 zauzeto',
+      features: ['Na otvorenom', 'Roštilj'],
+      available: '22/100',
+      pricePerHour: 17.52,
+    ),
+  ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-            colors: [
-              Color(0xFF6A00F4), // vibrant ljubičasta
-              Color(0xFF0A0A60), // duboka plava
-            ],
-          ),
-        ),
-
-        child: Column(
+      appBar: AppBar(
+        backgroundColor: Color(0xFF7C3AED),
+        elevation: 0,
+        automaticallyImplyLeading: false,
+        title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: EdgeInsets.fromLTRB(10, 20, 0, 0),
-              child: Row(
-                children: [
-                  Text(
-                    "ParkEasy Admin",
-                    style: TextStyle(
-                      fontSize: 40,
-                      color: Color.fromARGB(255, 255, 255, 255),
-                    ),
-                  ),
-
-                  Spacer(),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(0, 0, 10, 0),
-                    child: Container(
-                      height: 40,
-                      width: 120,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(15),
-                        gradient: LinearGradient(
-                          begin: Alignment.centerLeft,
-                          end: Alignment.centerRight,
-                          colors: [
-                            Color.fromARGB(
-                              255,
-                              197,
-                              37,
-                              255,
-                            ), // vibrant ljubičasta
-                            Color.fromARGB(255, 0, 81, 255), // duboka plava
-                          ],
-                        ),
-                      ),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                        child: TextButton(
-                          onPressed: () {
-                            Navigator.pushAndRemoveUntil(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => LoginPage(),
-                              ),
-                              (route) => false,
-                            );
-                          },
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              Icon(
-                                Icons.logout,
-                                color: Color.fromARGB(255, 255, 255, 255),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  "Odjavi se",
-                                  style: TextStyle(
-                                    color: Color.fromARGB(255, 255, 255, 255),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+            Text(
+              'ParkEasy Admin',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
               ),
             ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(10, 0, 0, 0),
-              child: Text(
-                "Dobrodošli nazad, ${widget.ime} ",
-                style: TextStyle(
-                  fontSize: 20,
-                  color: Color.fromARGB(255, 255, 255, 255),
-                ),
-              ),
-            ),
-            SizedBox(
-              height: 125,
-              child: Consumer<MyAppState>(
-                builder: (context, state, child) {
-                  return Row(
-                    children: [
-                      Expanded(
-                        child: buildCard(
-                          "Aktivno sada",
-                          state.aktivnoSada.toString(),
-                          Icons.person_outline,
-                        ),
-                      ),
-                      Expanded(
-                        child: buildCard(
-                          "Danas",
-                          state.danas.toString(),
-                          Icons.calendar_today_outlined,
-                        ),
-                      ),
-                      Expanded(
-                        child: buildCard(
-                          "Završeno",
-                          state.zavrseno.toString(),
-                          Icons.show_chart,
-                        ),
-                      ),
-                      Expanded(
-                        child: buildCard(
-                          "Prihod",
-                          "\$${state.prihod.toStringAsFixed(2)}",
-                          Icons.attach_money,
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ),
-            Expanded(
-              child: Container(color: Color.fromARGB(255, 255, 255, 255)),
+            Text(
+              'Dobrodošli nazad, ${widget.ime}',
+              style: TextStyle(color: Colors.white70, fontSize: 12),
             ),
           ],
         ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                Icon(Icons.brightness_4, color: Colors.white),
+                SizedBox(width: 16),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute<void>(
+                        builder: (context) => LoginPage(),
+                      ),
+                      (route) => false,
+                    );
+                  },
+                  icon: Icon(Icons.logout, size: 16),
+                  label: Text('Odjavi se'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Color(0xFF7C3AED),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+      body: Consumer<MyAppState>(
+        builder: (context, state, child) {
+          return SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Stats Cards
+                Container(
+                  color: Color(0xFF7C3AED),
+                  padding: EdgeInsets.all(16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      buildCard('Aktivno Sada', state.aktivnoSada.toString(), Icons.people),
+                      buildCard('Danas', state.danas.toString(), Icons.calendar_today),
+                      buildCard('Završeno', '0', Icons.check_circle),
+                      buildCard('Prihod', '\$${state.prihod.toStringAsFixed(2)}', Icons.attach_money),
+                    ],
+                  ),
+                ),
+
+                // Tabs
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    children: [
+                      _buildTab('Pregled', 'pregled'),
+                      SizedBox(width: 8),
+                      _buildTab('Rezervacije', 'rezervacije'),
+                      SizedBox(width: 8),
+                      _buildTab('Parking Objekti', 'parking'),
+                    ],
+                  ),
+                ),
+
+                // Content
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: selectedTab == 'pregled' ? _buildPregledTab(state) : _buildRezervacijeTab(state),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
+
+  Widget _buildTab(String label, String value) {
+    return ElevatedButton(
+      onPressed: () => setState(() => selectedTab = value),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: selectedTab == value ? Color(0xFF7C3AED) : Colors.grey.shade300,
+        foregroundColor: selectedTab == value ? Colors.white : Colors.black,
+        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      ),
+      child: Text(label),
+    );
+  }
+
+  Widget _buildPregledTab(MyAppState state) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Nedavne Aktivnosti
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Nedavne Aktivnosti', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              SizedBox(height: 12),
+              if (state.rezervacije.isEmpty)
+                Text('Nema nedavnih aktivnosti')
+              else
+                ...state.rezervacije.take(5).map((r) => Card(
+                  margin: EdgeInsets.only(bottom: 8),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('${r.parkingName} - Mjesto #${r.mjestoBroj}', 
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                              SizedBox(height: 4),
+                              Text(r.datum.toLocal().toString(), 
+                                style: TextStyle(fontSize: 12, color: Colors.grey)),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: r.status == 'aktivna' ? Colors.green.shade200 : 
+                                   r.status == 'zavrsena' ? Colors.blue.shade200 :
+                                   Colors.red.shade200,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(r.status,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: r.status == 'aktivna' ? Colors.green.shade800 :
+                                     r.status == 'zavrsena' ? Colors.blue.shade800 :
+                                     Colors.red.shade800,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )),
+            ],
+          ),
+        ),
+        SizedBox(width: 24),
+        // Najbolje Lokacije
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Najbolje Lokacije', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              SizedBox(height: 12),
+              ...parkings.map((parking) => Card(
+                margin: EdgeInsets.only(bottom: 8),
+                child: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(parking.name, style: TextStyle(fontWeight: FontWeight.bold)),
+                          Text(parking.address, style: TextStyle(fontSize: 12, color: Colors.grey)),
+                        ],
+                      ),
+                      Text(
+                        '\$${(double.parse(parking.available.split('/')[0]) * parking.pricePerHour).toStringAsFixed(2)}',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF7C3AED)),
+                      ),
+                    ],
+                  ),
+                ),
+              )),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRezervacijeTab(MyAppState state) {
+    final sve = state.rezervacije;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Sve Rezervacije', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        SizedBox(height: 12),
+        if (sve.isEmpty)
+          Text('Nema rezervacija')
+        else
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8)],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // show count for clarity
+        
+                SizedBox(height: 12),
+                // header row
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Row(
+                    children: [
+                      SizedBox(width: 140, child: Text('ID', style: TextStyle(fontWeight: FontWeight.bold))),
+                      Expanded(child: Text('Lokacija', style: TextStyle(fontWeight: FontWeight.bold))),
+                      SizedBox(width: 180, child: Text('Početak', style: TextStyle(fontWeight: FontWeight.bold))),
+                      SizedBox(width: 80, child: Text('Trajanje', style: TextStyle(fontWeight: FontWeight.bold))),
+                      SizedBox(width: 100, child: Text('Iznos', style: TextStyle(fontWeight: FontWeight.bold))),
+                      SizedBox(width: 100, child: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
+                    ],
+                  ),
+                ),
+                Divider(),
+                // list of reservations
+                ...sve.map((r) {
+                  final idNumber = r.datum.year.toString() +
+                      r.datum.month.toString().padLeft(2, '0') +
+                      r.datum.day.toString().padLeft(2, '0') +
+                      r.mjestoBroj.toString().padLeft(3, '0');
+                  final dateLocal = r.datum.toLocal();
+                  final month = dateLocal.month;
+                  final day = dateLocal.day;
+                  final year = dateLocal.year;
+                  final hour = dateLocal.hour;
+                  final minute = dateLocal.minute.toString().padLeft(2, '0');
+                  final second = dateLocal.second.toString().padLeft(2, '0');
+                  final ampm = hour >= 12 ? 'PM' : 'AM';
+                  final display12Hour = (hour % 12 == 0 ? 12 : hour % 12).toString();
+                  final formattedTime = '$month/$day/$year, $display12Hour:$minute:$second $ampm';
+
+                  return Card(
+                    margin: EdgeInsets.symmetric(vertical: 8),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: 140,
+                            child: Text('#$idNumber', maxLines: 1, overflow: TextOverflow.ellipsis, softWrap: false),
+                          ),
+                          Expanded(child: Text('${r.parkingName} - Mjesto #${r.mjestoBroj}')),
+                          SizedBox(width: 180, child: Text(formattedTime)),
+                          SizedBox(width: 80, child: Text('${r.durationHours.toStringAsFixed(0)}h')),
+                          SizedBox(width: 100, child: Text('\$${r.prihod.toStringAsFixed(2)}')),
+                          SizedBox(
+                            width: 100,
+                            child: Container(
+                              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: r.status == 'aktivna'
+                                    ? Colors.green.shade100
+                                    : r.status == 'zavrsena'
+                                        ? Colors.blue.shade100
+                                        : Colors.red.shade100,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  r.status[0].toUpperCase() + r.status.substring(1),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: r.status == 'aktivna'
+                                        ? Colors.green.shade800
+                                        : r.status == 'zavrsena'
+                                            ? Colors.blue.shade800
+                                            : Colors.red.shade800,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
 }
+
+Widget buildCard(String title, String value, IconData icon) {
+    return Container(
+      width: 250,
+      margin: EdgeInsets.all(8),
+      padding: EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4)],
+      ),
+      child: Row(
+        children: [
+          Container(
+            height: 50,
+            width: 50,
+            decoration: BoxDecoration(
+              color: Color(0xFF1A1A2E),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: Colors.white, size: 28),
+          ),
+          SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(title, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+              Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
 
 class _HomePageState extends State<HomePage> {
   String selectedTab = 'search';
@@ -1665,12 +1870,18 @@ class _RezervacijaPageState extends State<RezervacijaPage> {
                 ),
                 SizedBox(height: 12),
                 TextFormField(
+                  autocorrect: false,
+                  enableSuggestions: false,
+
                   controller: cardController,
                   keyboardType: TextInputType.number,
-                  decoration: InputDecoration(labelText: 'Broj Kartice'),
-                  maxLength: 16,
+                  decoration: InputDecoration(labelText: 'Broj Kartice',
+                  counterText: "",),
+                
                   inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9 ]')),
+                    LengthLimitingTextInputFormatter(19),
+                    CardNumberFormatter(),
                   ],
                   validator: (value) {
                     if (value == null || value.length != 16) {
@@ -1691,10 +1902,12 @@ class _RezervacijaPageState extends State<RezervacijaPage> {
                     Expanded(
                       child: TextFormField(
                         controller: expiryController,
-                        decoration: InputDecoration(labelText: 'Datum Isteka'),
-                        maxLength: 4,
+                        decoration: InputDecoration(labelText: 'Datum Isteka',counterText: ""),
+                        
                         inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
+                          FilteringTextInputFormatter.allow(RegExp(r'[0-9/]')),
+                          LengthLimitingTextInputFormatter(5),
+                          expiryDateNumberFormater(),
                         ],
                       ),
                     ),
@@ -1703,10 +1916,12 @@ class _RezervacijaPageState extends State<RezervacijaPage> {
                       child: TextFormField(
                         controller: cvvController,
                         keyboardType: TextInputType.number,
-                        decoration: InputDecoration(labelText: 'CVV'),
-                        maxLength: 3,
+                        decoration: InputDecoration(labelText: 'CVV',counterText: ""),
+                   
                         inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
+                          FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
+                          LengthLimitingTextInputFormatter(3),
+             
                         ],
                       ),
                     ),
@@ -1743,6 +1958,75 @@ class _RezervacijaPageState extends State<RezervacijaPage> {
       },
     );
   }
+}
+
+class expiryDateNumberFormater extends TextInputFormatter{
+  @override 
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ){
+    var text = newValue.text;
+    
+
+    if(newValue.selection.baseOffset == 0){
+      return newValue;
+    }
+
+    var cleanedText = text.replaceAll(RegExp(r'[^0-9]'), '');
+    
+
+    if(cleanedText.length > 4){
+      cleanedText = cleanedText.substring(0, 4);
+    }
+    
+ 
+    var buffer = StringBuffer();
+    for(int i = 0; i < cleanedText.length; i++){
+      buffer.write(cleanedText[i]);
+
+      if(i == 1 && cleanedText.length > 2){
+        buffer.write('/');
+      }
+    }
+    
+    var string = buffer.toString();
+    
+
+    return TextEditingValue(
+      text: string,
+      selection: TextSelection.collapsed(offset: string.length),
+    );
+  }
+}
+
+class CardNumberFormatter extends TextInputFormatter{
+@override 
+TextEditingValue formatEditUpdate(
+  TextEditingValue oldValue,
+  TextEditingValue newValue,
+
+){
+  var text=newValue.text;
+  if(newValue.selection.baseOffset==0){
+    return newValue;
+  }
+  var cleanedText=text.replaceAll(' ', '');
+  var buffer=StringBuffer();
+  for(int i=0;i<cleanedText.length;i++){
+    buffer.write(cleanedText[i]);
+    var index=i+1;
+    if(index%4==0 && index!=cleanedText.length){
+      buffer.write(' ');
+    }
+  }
+var string=buffer.toString();
+return TextEditingValue(
+  text: string,
+  selection: TextSelection.collapsed(offset: string.length),
+);
+}
+
 }
 
 class ReservationBanner extends StatefulWidget {
