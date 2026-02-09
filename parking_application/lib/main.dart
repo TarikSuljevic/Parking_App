@@ -8,6 +8,13 @@ void main() {
   runApp(MyApp());
 }
 
+// Helper: provide button colors that adapt for dark mode.
+Color _buttonBackground(BuildContext context, Color lightModeColor) =>
+    Theme.of(context).brightness == Brightness.dark ? Theme.of(context).cardColor : lightModeColor;
+
+Color _buttonForeground(BuildContext context, Color lightModeColor) =>
+    Theme.of(context).brightness == Brightness.dark ? Colors.white : lightModeColor;
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -16,9 +23,9 @@ class MyApp extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (context) => MyAppState(),
       child: Consumer<MyAppState>(builder: (context, state, child) {
-        // Light theme (keeps default feel)
+        // Light theme (app primary color set to purple used across UI)
         final lightTheme = ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepOrange),
+          colorScheme: ColorScheme.fromSeed(seedColor: Color(0xFF7C3AED)),
           scaffoldBackgroundColor: Colors.white,
         );
 
@@ -29,7 +36,7 @@ class MyApp extends StatelessWidget {
           scaffoldBackgroundColor: darkBackground,
           canvasColor: darkBackground,
           cardColor: Color(0xFF1f2937),
-          dialogBackgroundColor: Color(0xFF111827),
+          dialogTheme: DialogThemeData(backgroundColor: Color(0xFF111827)),
           textTheme: ThemeData.dark().textTheme.apply(
                 bodyColor: softWhite.withOpacity(0.9),
                 displayColor: softWhite.withOpacity(0.95),
@@ -176,7 +183,7 @@ class MyAppState extends ChangeNotifier {
   }
 
   // Theme mode: true = dark, false = light
-  bool isDarkMode = true;
+  bool isDarkMode = false;
 
   void toggleTheme() {
     isDarkMode = !isDarkMode;
@@ -213,7 +220,16 @@ class LoginPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(automaticallyImplyLeading: false),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        elevation: 0,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 28.0),
+            child: DarkModeButton(),
+          ),
+        ],
+      ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -347,116 +363,153 @@ class _UserInputPageState extends State<UserInputPage> {
     return Scaffold(
       appBar: AppBar(automaticallyImplyLeading: false),
       body: Center(
-        child: SingleChildScrollView( // Dodano da aplikacija ne puca na malim ekranima
-          child: Card(
-            // Smanjen horizontalni margin jer je 560 previše za većinu ekrana
-            margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 5), 
-            child: Padding(
-              padding: const EdgeInsets.all(24.0), // Normalizovan padding
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min, // Card će se skupiti oko sadržaja
-                  children: [
-                    Row(
+        child: Card(
+          margin: const EdgeInsets.symmetric(horizontal: 560, vertical: 5),
+          child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12.0, 100, 12.0, 12.0),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.start, //Card će se skupiti oko sadržaja
+                children: [
+                  Row(
+                    children: [
+                      BackButton(onPressed: () => Navigator.pop(context)),
+                      const Text("Nazad"),
+                        Spacer(),
+                        DarkModeButton(),
+                    ],
+                  ),
+                  const Icon(
+                    Icons.supervised_user_circle_rounded,
+                    color: Colors.deepPurple,
+                    size: 55,
+                  ),
+                  SizedBox(width: 40),
+                  Text(
+                    'Korisnička prijava',
+                    style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
+                  ),
+                  Text(
+                    'Unesite vaše podatke za nastavak',
+                    style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.8)),
+                  ),
+                  const SizedBox(height: 20),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(30.0, 20.0, 30.0, 0.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        BackButton(onPressed: () => Navigator.pop(context)),
-                        const Text("Nazad"),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(0.0, 0.0, 0.0, 8.0),
+                          child: Text('Ime'),
+                        ),
+                        TextFormField(
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(),
+                            hintText: "Unesite vaše ime",
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) return "Molimo unesite ime";
+                            return null;
+                          },
+                          onChanged: (value) => ime = value,
+                          onFieldSubmitted: (value) {
+                            if (_formKey.currentState!.validate()) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => HomePage(ime: ime),
+                                ),
+                              );
+                            }
+                          },
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(0.0, 8.0, 0.0, 8.0),
+                          child: Text('Email'),
+                        ),
+                        TextFormField(
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(),
+                            hintText: "Unesite vaš email",
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) return "Molimo unesite email";
+                            int indexOf = value.indexOf(("@"));
+                            if (indexOf == -1) return "Email mora sadržavati @";
+                            if (indexOf == value.length - 1) return "Molimo unesite znak nakon @";
+                            return null;
+                          },
+                          onFieldSubmitted: (value) {
+                            if (_formKey.currentState!.validate()) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => HomePage(ime: ime),
+                                ),
+                              );
+                            }
+                          },
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(0.0, 8.0, 0.0, 8.0),
+                          child: Text('Lozinka'),
+                        ),
+                        TextFormField(
+                          obscureText: true,
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(),
+                            hintText: "Unesite vašu lozinku",
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) return "Molimo unesite lozinku";
+                            return null;
+                          },
+                          onFieldSubmitted: (value) {
+                            if (_formKey.currentState!.validate()) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => HomePage(ime: ime),
+                                ),
+                              );
+                            }
+                          },
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(0.0, 20.0, 0.0, 0.0),
+                          child: Center(
+                            child: ElevatedButton(
+                              onPressed: () {
+                                if (_formKey.currentState!.validate()) {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute<void>(
+                                      builder: (context) => HomePage(ime: ime),
+                                    ),
+                                  );
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _buttonBackground(context, Theme.of(context).colorScheme.primary),
+                                foregroundColor: _buttonForeground(context, Colors.white),
+                              ),
+                              child: Text('Prijavi se'),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
-                    const Icon(
-                      Icons.supervised_user_circle_rounded,
-                      color: Colors.deepPurple,
-                      size: 55,
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      'Korisnička prijava',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    Text(
-                      'Unesite vaše podatke za nastavak',
-                      style: TextStyle(
-                        color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.6),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    
-                    // IME POLJE
-                    TextFormField(
-                      decoration: const InputDecoration(
-                        labelText: 'Ime',
-                        border: OutlineInputBorder(),
-                        hintText: "Unesite vaše ime",
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) return 'Molimo unesite ime';
-                        return null;
-                      },
-                      onChanged: (value) => ime = value,
-                    ),
-                    const SizedBox(height: 16),
-
-                    // EMAIL POLJE
-                    TextFormField(
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        border: OutlineInputBorder(),
-                        hintText: "Unesite vaš email",
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) return 'Molimo unesite email';
-                        if (!value.contains('@')) return "Email mora sadržavati @";
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-
-                    // LOZINKA POLJE
-                    TextFormField(
-                      obscureText: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Lozinka',
-                        border: OutlineInputBorder(),
-                        hintText: "Unesite vašu lozinku",
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) return 'Molimo unesite lozinku';
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 24),
-
-                    // DUGME ZA PRIJAVU
-                    SizedBox(
-                      width: double.infinity, // Dugme preko cijele širine card-a
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.deepPurple,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 15),
-                        ),
-                        onPressed: () {
-                          if (_formKey.currentState!.validate()) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => HomePage(ime: ime),
-                              ),
-                            );
-                          }
-                        },
-                        child: const Text('Prijavi se'),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
         ),
-      ),
-    );
+          ),
+      );
+    
   }
 }
 
@@ -493,6 +546,8 @@ class _AdminInputPageState extends State<AdminInputPage> {
                         // child:
                       ),
                       Text("Nazad"),
+                      Spacer(),
+                      DarkModeButton(),
                     ],
                   ),
                   Icon(
@@ -640,6 +695,10 @@ class _AdminInputPageState extends State<AdminInputPage> {
                                   );
                                 }
                               },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _buttonBackground(context, Theme.of(context).colorScheme.primary),
+                                foregroundColor: _buttonForeground(context, Colors.white),
+                              ),
                               child: Text('Prijavi se'),
                             ),
                           ),
@@ -751,47 +810,52 @@ class _AdminPageState extends State<AdminPage> {
         backgroundColor: Color(0xFF7C3AED),
         elevation: 0,
         automaticallyImplyLeading: false,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'ParkEasy Admin',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            Text(
-              'Dobrodošli nazad, ${widget.ime}',
-              style: TextStyle(color: Colors.white70, fontSize: 12),
-            ),
-          ],
+        title: Text(
+          'ParkEasy Admin',
+          style: TextStyle(
+            color: Theme.of(context).textTheme.headlineSmall?.color,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         actions: [
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Row(
               children: [
-                Icon(Icons.brightness_4, color: Colors.white),
-                SizedBox(width: 16),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute<void>(
-                        builder: (context) => LoginPage(),
-                      ),
-                      (route) => false,
-                    );
-                  },
-                  icon: Icon(Icons.logout, size: 16),
-                  label: Text('Odjavi se'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Color(0xFF7C3AED),
+                // Welcome message
+                Text(
+                  'Dobrodošli nazad, ${widget.ime}',
+                  style: TextStyle(
+                    color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.9),
+                    fontSize: 13,
                   ),
                 ),
+                SizedBox(width: 16),
+                // use the shared DarkModeButton for consistent behavior and appearance
+                DarkModeButton(),
+                SizedBox(width: 12),
+                Builder(builder: (ctx) {
+                  final theme = Theme.of(ctx);
+                  final isDark = theme.brightness == Brightness.dark;
+                  return ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute<void>(
+                          builder: (context) => LoginPage(),
+                        ),
+                        (route) => false,
+                      );
+                    },
+                    icon: Icon(Icons.logout, size: 16, color: isDark ? theme.colorScheme.onSurface : Color(0xFF7C3AED)),
+                    label: Text('Odjavi se', style: TextStyle(color: isDark ? theme.colorScheme.onSurface : Color(0xFF7C3AED))),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isDark ? _buttonBackground(ctx, Colors.white) : Colors.white,
+                      foregroundColor: isDark ? _buttonForeground(ctx, theme.colorScheme.onSurface) : Color(0xFF7C3AED),
+                    ),
+                  );
+                }),
               ],
             ),
           ),
@@ -810,10 +874,10 @@ class _AdminPageState extends State<AdminPage> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      buildCard('Aktivno Sada', state.aktivnoSada.toString(), Icons.people),
-                      buildCard('Danas', state.danas.toString(), Icons.calendar_today),
-                      buildCard('Završeno', '0', Icons.check_circle),
-                      buildCard('Prihod', '\$${state.prihod.toStringAsFixed(2)}', Icons.attach_money),
+                      buildCard(context, 'Aktivno Sada', state.aktivnoSada.toString(), Icons.people),
+                      buildCard(context, 'Danas', state.danas.toString(), Icons.calendar_today),
+                      buildCard(context, 'Završeno', '0', Icons.check_circle),
+                      buildCard(context, 'Prihod', '\$${state.prihod.toStringAsFixed(2)}', Icons.attach_money),
                     ],
                   ),
                 ),
@@ -850,11 +914,14 @@ class _AdminPageState extends State<AdminPage> {
   }
 
   Widget _buildTab(String label, String value) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return ElevatedButton(
       onPressed: () => setState(() => selectedTab = value),
       style: ElevatedButton.styleFrom(
-        backgroundColor: selectedTab == value ? Color(0xFF7C3AED) : Colors.grey.shade300,
-        foregroundColor: selectedTab == value ? Colors.white : Colors.black,
+        backgroundColor: selectedTab == value
+            ? (isDark ? _buttonBackground(context, Color(0xFF7C3AED)) : Color(0xFF7C3AED))
+            : (isDark ? _buttonBackground(context, Colors.grey.shade300) : Colors.grey.shade300),
+        foregroundColor: selectedTab == value ? (isDark ? _buttonForeground(context, Colors.black87) : Colors.white) : (isDark ? Colors.white : Colors.black),
         padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       ),
       child: Text(label),
@@ -901,9 +968,9 @@ class _AdminPageState extends State<AdminPage> {
         ElevatedButton(
           onPressed: () => Navigator.pop(context),
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.grey.shade300,
-            foregroundColor: Colors.black,
-          ),
+              backgroundColor: _buttonBackground(context, Colors.grey.shade300),
+              foregroundColor: _buttonForeground(context, Colors.black),
+            ),
           child: Text('Odustani'),
         ),
         ElevatedButton(
@@ -963,9 +1030,9 @@ class _AdminPageState extends State<AdminPage> {
         ElevatedButton(
           onPressed: () => Navigator.pop(context),
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.grey.shade300,
-            foregroundColor: Colors.black,
-          ),
+              backgroundColor: _buttonBackground(context, Colors.grey.shade300),
+              foregroundColor: _buttonForeground(context, Colors.black),
+            ),
           child: Text('Odustani'),
         ),
         ElevatedButton(
@@ -1098,39 +1165,41 @@ class _AdminPageState extends State<AdminPage> {
       children: [
         Text('Sve Rezervacije', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         SizedBox(height: 12),
-        Container(
-          width: double.infinity,
-          padding: EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8)],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+        Builder(builder: (ctx) {
+          final isDark = Theme.of(ctx).brightness == Brightness.dark;
+          return Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDark ? Theme.of(ctx).cardColor : Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [BoxShadow(color: isDark ? Colors.black45 : Colors.black12, blurRadius: 8)],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
               SizedBox(height: 12),
               // header row
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8.0),
                 child: Row(
                   children: [
-                    Expanded(child: Text('ID', style: TextStyle(fontWeight: FontWeight.bold))),
-                    Expanded(child: Text('Lokacija', style: TextStyle(fontWeight: FontWeight.bold))),
-                    Expanded(child: Text('Početak', style: TextStyle(fontWeight: FontWeight.bold))),
-                    Expanded(child: Text('Trajanje', style: TextStyle(fontWeight: FontWeight.bold))),
-                    Expanded(child: Text('Iznos', style: TextStyle(fontWeight: FontWeight.bold))),
-                    Expanded(child: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
+                    Expanded(child: Text('ID', style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black))),
+                    Expanded(child: Text('Lokacija', style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black))),
+                    Expanded(child: Text('Početak', style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black))),
+                    Expanded(child: Text('Trajanje', style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black))),
+                    Expanded(child: Text('Iznos', style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black))),
+                    Expanded(child: Text('Status', style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black))),
                   ],
                 ),
               ),
-              Divider(),
+              Divider(color: isDark ? Colors.grey.shade700 : Colors.grey.shade300),
               // content: either placeholder message or list
               if (sve.isEmpty)
                 SizedBox(
                   height: 140,
                   child: Center(
-                    child: Text('Još nema rezervacija', style: TextStyle(color: Colors.grey)),
+                    child: Text('Još nema rezervacija', style: TextStyle(color: isDark ? Colors.grey.shade400 : Colors.grey)),
                   ),
                 )
               else
@@ -1152,24 +1221,25 @@ class _AdminPageState extends State<AdminPage> {
 
                   return Card(
                     margin: EdgeInsets.symmetric(vertical: 8),
+                    color: isDark ? Color(0xFF2a2a3e) : Colors.white,
                     child: Padding(
                       padding: const EdgeInsets.all(12.0),
                       child: Row(
                         children: [
-                          Expanded(child: Text('#$idNumber', maxLines: 1, overflow: TextOverflow.ellipsis, softWrap: false)),
-                          Expanded(child: Text('${r.parkingName} - Mjesto #${r.mjestoBroj}')),
-                          Expanded(child: Text(formattedTime)),
-                          Expanded(child: Text('${r.durationHours.toStringAsFixed(0)}h')),
-                          Expanded(child: Text('\$${r.prihod.toStringAsFixed(2)}')),
+                          Expanded(child: Text('#$idNumber', maxLines: 1, overflow: TextOverflow.ellipsis, softWrap: false, style: TextStyle(color: isDark ? Colors.white : Colors.black))),
+                          Expanded(child: Text('${r.parkingName} - Mjesto #${r.mjestoBroj}', style: TextStyle(color: isDark ? Colors.white : Colors.black))),
+                          Expanded(child: Text(formattedTime, style: TextStyle(color: isDark ? Colors.white : Colors.black))),
+                          Expanded(child: Text('${r.durationHours.toStringAsFixed(0)}h', style: TextStyle(color: isDark ? Colors.white : Colors.black))),
+                          Expanded(child: Text('\$${r.prihod.toStringAsFixed(2)}', style: TextStyle(color: isDark ? Colors.white : Colors.black))),
                           Expanded(
                             child: Container(
                               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
                                 color: r.status == 'aktivna'
-                                    ? Colors.green.shade100
+                                    ? (isDark ? Colors.green.shade900 : Colors.green.shade100)
                                     : r.status == 'zavrsena'
-                                        ? Colors.blue.shade100
-                                        : Colors.red.shade100,
+                                        ? (isDark ? Colors.blue.shade900 : Colors.blue.shade100)
+                                        : (isDark ? Colors.red.shade900 : Colors.red.shade100),
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: Center(
@@ -1178,11 +1248,13 @@ class _AdminPageState extends State<AdminPage> {
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
-                                    color: r.status == 'aktivna'
-                                        ? Colors.green.shade800
-                                        : r.status == 'zavrsena'
-                                            ? Colors.blue.shade800
-                                            : Colors.red.shade800,
+                                    color: isDark
+                                        ? Colors.white
+                                        : (r.status == 'aktivna'
+                                            ? Colors.green.shade800
+                                            : r.status == 'zavrsena'
+                                                ? Colors.blue.shade800
+                                                : Colors.red.shade800),
                                   ),
                                 ),
                               ),
@@ -1193,9 +1265,10 @@ class _AdminPageState extends State<AdminPage> {
                     ),
                   );
                 }).toList(),
-            ],
-          ),
-        ),
+              ],
+            ),
+          );
+        }),
       ],
     );
   }
@@ -1219,8 +1292,8 @@ class _AdminPageState extends State<AdminPage> {
               icon: Icon(Icons.add),
               label: Text('Dodaj Novu Lokaciju'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF7C3AED),
-                foregroundColor: Colors.white,
+                backgroundColor: _buttonBackground(context, Color(0xFF7C3AED)),
+                foregroundColor: _buttonForeground(context, Colors.white),
               ),
             ),
           ],
@@ -1249,15 +1322,15 @@ class _AdminPageState extends State<AdminPage> {
                       children: [
                         Row(
                           children: [
-                            Container(
-                              width: 48,
-                              height: 48,
-                              decoration: BoxDecoration(
-                                color: Colors.deepPurple.shade100,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Icon(Icons.directions_car, color: Colors.deepPurple),
-                            ),
+                                Container(
+                                  width: 48,
+                                  height: 48,
+                                  decoration: BoxDecoration(
+                                    color: Color(0xFF7C3AED).withOpacity(0.12),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Icon(Icons.directions_car, color: Color(0xFF7C3AED)),
+                                ),
                             SizedBox(width: 12),
                             Expanded(
                               child: Column(
@@ -1331,13 +1404,20 @@ class _AdminPageState extends State<AdminPage> {
   }
 }
 
-Widget buildCard(String title, String value, IconData icon) {
+Widget buildCard(BuildContext context, String title, String value, IconData icon) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final cardBg = isDark ? theme.cardColor : Colors.white;
+    final iconBg = isDark ? Colors.grey.shade800 : Color(0xFF1A1A2E);
+    final titleColor = theme.textTheme.bodySmall?.color ?? Colors.black87;
+    final valueColor = theme.colorScheme.primary;
+
     return Container(
       width: 250,
       margin: EdgeInsets.all(8),
       padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4)],
       ),
@@ -1347,7 +1427,7 @@ Widget buildCard(String title, String value, IconData icon) {
             height: 50,
             width: 50,
             decoration: BoxDecoration(
-              color: Color(0xFF1A1A2E),
+              color: iconBg,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, color: Colors.white, size: 28),
@@ -1358,7 +1438,7 @@ Widget buildCard(String title, String value, IconData icon) {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(title, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-              Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+                      Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: valueColor)),
             ],
           ),
         ],
@@ -1371,6 +1451,9 @@ class _HomePageState extends State<HomePage> {
   String selectedTab = 'search';
   String sortBy = 'Udaljenost';
   late TextEditingController _searchController;
+  // which parking is hovered in the lower list / map
+  String? hoveredParkingName;
+  Timer? _hoverExitTimer;
 
   @override
   void initState() {
@@ -1381,7 +1464,37 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     _searchController.dispose();
+    _hoverExitTimer?.cancel();
     super.dispose();
+  }
+
+  void _onHoverEnter(String name) {
+    _hoverExitTimer?.cancel();
+    if (hoveredParkingName != name) setState(() => hoveredParkingName = name);
+  }
+
+  void _onHoverExit() {
+    _hoverExitTimer?.cancel();
+    _hoverExitTimer = Timer(const Duration(milliseconds: 180), () {
+      if (hoveredParkingName != null) setState(() => hoveredParkingName = null);
+    });
+  }
+
+  Widget _legendDot(BuildContext context, Color color, String label) {
+    final theme = Theme.of(context);
+    final textColor = theme.textTheme.bodyMedium?.color ?? Colors.black87;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        SizedBox(width: 8),
+        Text(label, style: TextStyle(color: textColor)),
+      ],
+    );
   }
 
   List<ParkingListing> get filteredAndSortedParkings {
@@ -1466,15 +1579,8 @@ class _HomePageState extends State<HomePage> {
                   style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.9)),
                 ),
                 SizedBox(width: 12),
-                // Theme toggle placed between welcome and logout
-                Consumer<MyAppState>(builder: (context, s, _) {
-                  return IconButton(
-                    tooltip: s.isDarkMode ? 'Switch to light' : 'Switch to dark',
-                    onPressed: () => s.toggleTheme(),
-                    icon: Icon(s.isDarkMode ? Icons.light_mode : Icons.dark_mode),
-                    color: s.isDarkMode ? Colors.yellow[600] : Theme.of(context).iconTheme.color,
-                  );
-                }),
+                // Theme toggle placed between welcome and logout (icon-only)
+                DarkModeButton(),
                 SizedBox(width: 8),
                 TextButton(
                   onPressed: () {
@@ -1519,11 +1625,11 @@ class _HomePageState extends State<HomePage> {
                         label: Text('Pretraži Parking'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: selectedTab == 'search'
-                              ? Theme.of(context).colorScheme.primary
-                              : Theme.of(context).cardColor,
+                            ? Theme.of(context).colorScheme.primary
+                            : Theme.of(context).cardColor,
                           foregroundColor: selectedTab == 'search'
-                              ? Colors.white
-                              : Theme.of(context).textTheme.bodyMedium?.color,
+                            ? (Theme.of(context).brightness == Brightness.dark ? Colors.black87 : Colors.white)
+                            : Theme.of(context).textTheme.bodyMedium?.color,
                         ),
                       ),
                   SizedBox(width: 12),
@@ -1533,11 +1639,11 @@ class _HomePageState extends State<HomePage> {
                     label: Text('Prikaz Mape'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: selectedTab == 'map'
-                          ? Theme.of(context).colorScheme.primary
-                          : Theme.of(context).cardColor,
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).cardColor,
                       foregroundColor: selectedTab == 'map'
-                          ? Colors.white
-                          : Theme.of(context).textTheme.bodyMedium?.color,
+                        ? (Theme.of(context).brightness == Brightness.dark ? Colors.black87 : Colors.white)
+                        : Theme.of(context).textTheme.bodyMedium?.color,
                     ),
                   ),
                 ],
@@ -1603,48 +1709,140 @@ class _HomePageState extends State<HomePage> {
                 itemCount: filteredAndSortedParkings.length,
                 itemBuilder: (context, index) {
                   final parking = filteredAndSortedParkings[index];
-                  return ParkingCard(parking: parking);
+                  return MouseRegion(
+                    onEnter: (_) => _onHoverEnter(parking.name),
+                    onExit: (_) => _onHoverExit(),
+                    child: AnimatedContainer(
+                      duration: Duration(milliseconds: 180),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        border: hoveredParkingName == parking.name
+                            ? Border.all(color: Theme.of(context).colorScheme.primary, width: 2)
+                            : Border.all(color: Colors.transparent),
+                      ),
+                      child: ParkingCard(parking: parking),
+                    ),
+                  );
                 },
               ),
             ] else if (selectedTab == 'map') ...[
-              // Simple interactive map placeholder
+              // Map view with title, legend, interactive pins and parking list below
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Container(
-                  height: 420,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: LayoutBuilder(builder: (context, constraints) {
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(height: 8),
+                    Text('Interaktivna Mapa', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    SizedBox(height: 8),
+                    // legend
+                    Row(
+                      children: [
+                        _legendDot(context, Colors.green, 'Dostupno'),
+                        SizedBox(width: 12),
+                        _legendDot(context, Colors.orange, 'Ograničeno'),
+                        SizedBox(width: 12),
+                        _legendDot(context, Colors.red, 'Skoro Puno'),
+                      ],
+                    ),
+                    SizedBox(height: 12),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12.0),
+                      child: Container(
+                        height: 420,
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).brightness == Brightness.dark ? Color(0xFF0B1220) : Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: LayoutBuilder(builder: (context, constraints) {
                     // sample marker positions (relative) - 5 markers, closer together
                     // Tighter cluster (zoomed-in look) - 5 markers closer together
                     final centerX = constraints.maxWidth * 0.48;
                     final centerY = constraints.maxHeight * 0.4;
-                    final markerPositions = [
-                      Offset(centerX - constraints.maxWidth * 0.06, centerY + constraints.maxHeight * 0.03),
-                      Offset(centerX - constraints.maxWidth * 0.02, centerY - constraints.maxHeight * 0.02),
-                      Offset(centerX + constraints.maxWidth * 0.03, centerY + constraints.maxHeight * 0.02),
-                      Offset(centerX + constraints.maxWidth * 0.08, centerY - constraints.maxHeight * 0.04),
-                      Offset(centerX - constraints.maxWidth * 0.01, centerY - constraints.maxHeight * 0.05),
-                    ];
+                              // slightly increase spacing between markers for clarity
+                              final markerPositions = [
+                                Offset(centerX - constraints.maxWidth * 0.09, centerY + constraints.maxHeight * 0.05),
+                                Offset(centerX - constraints.maxWidth * 0.035, centerY - constraints.maxHeight * 0.03),
+                                Offset(centerX + constraints.maxWidth * 0.045, centerY + constraints.maxHeight * 0.03),
+                                Offset(centerX + constraints.maxWidth * 0.12, centerY - constraints.maxHeight * 0.06),
+                                Offset(centerX - constraints.maxWidth * 0.025, centerY - constraints.maxHeight * 0.07),
+                              ];
+                    // compute marker ordering and widgets so we can render the hovered marker last
+                    final availableCount = markerPositions.length < filteredAndSortedParkings.length
+                        ? markerPositions.length
+                        : filteredAndSortedParkings.length;
+                    final indices = List<int>.generate(availableCount, (i) => i);
+                    if (hoveredParkingName != null) {
+                      final hoverIndex = filteredAndSortedParkings.indexWhere((p) => p.name == hoveredParkingName);
+                      if (hoverIndex != -1 && hoverIndex < availableCount) {
+                        indices.remove(hoverIndex);
+                        indices.add(hoverIndex);
+                      }
+                    }
+                    final markerWidgets = indices.map((i) => _MapMarker(
+                          position: markerPositions[i],
+                          parking: filteredAndSortedParkings[i],
+                          highlighted: hoveredParkingName == filteredAndSortedParkings[i].name,
+                          onEnter: (name) => _onHoverEnter(name),
+                          onExit: () => _onHoverExit(),
+                        )).toList();
+
                     return Stack(
                       children: [
                         // grid background
                         Positioned.fill(
                           child: CustomPaint(
-                            painter: _MapGridPainter(),
+                            painter: _MapGridPainter(gridColor: Theme.of(context).brightness == Brightness.dark ? Colors.white10 : Colors.grey.shade300.withOpacity(0.6)),
                           ),
                         ),
-                        // markers
-                        for (int i = 0; i < markerPositions.length && i < filteredAndSortedParkings.length; i++)
-                          _MapMarker(
-                            position: markerPositions[i],
-                            parking: filteredAndSortedParkings[i],
+                        // simulated "my location" blue circle near center
+                        Positioned(
+                          left: centerX - 12,
+                          top: centerY - 12,
+                          child: Container(
+                            width: 24,
+                            height: 24,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.blue.withOpacity(0.9),
+                              boxShadow: [BoxShadow(color: Colors.blue.withOpacity(0.25), blurRadius: 8, spreadRadius: 4)],
+                            ),
                           ),
+                        ),
+                        // markers (hovered marker rendered last)
+                        ...markerWidgets,
                       ],
                     );
                   }),
+                      ),
+                    ),
+                    SizedBox(height: 12),
+                    // Parking list under the map (two-column responsive layout)
+                    LayoutBuilder(builder: (context, constraints) {
+                      final itemWidth = (constraints.maxWidth - 16) / 2;
+                      return Wrap(
+                        spacing: 16,
+                        runSpacing: 16,
+                        children: filteredAndSortedParkings.map((parking) {
+                          return MouseRegion(
+                            onEnter: (_) => _onHoverEnter(parking.name),
+                            onExit: (_) => _onHoverExit(),
+                            child: AnimatedContainer(
+                              duration: Duration(milliseconds: 180),
+                              width: itemWidth,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                                border: hoveredParkingName == parking.name
+                                    ? Border.all(color: Theme.of(context).colorScheme.primary, width: 2)
+                                    : Border.all(color: Colors.transparent),
+                              ),
+                              child: ParkingCard(parking: parking),
+                            ),
+                          );
+                        }).toList(),
+                      );
+                    }),
+                  ],
                 ),
               ),
             ],
@@ -1719,6 +1917,44 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
     );
+  }
+}
+
+// Reusable dark-mode toggle button used across the app so it looks identical everywhere.
+class DarkModeButton extends StatelessWidget {
+  const DarkModeButton({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<MyAppState>(builder: (context, s, _) {
+      final isDark = Theme.of(context).brightness == Brightness.dark || s.isDarkMode;
+      // Dark-mode appearance: darker circular background (not full scaffold), yellow sun icon
+      // Light-mode appearance: white circular background, purple icon
+      final theme = Theme.of(context);
+      final bgColor = isDark ? theme.cardColor : Colors.white;
+      final iconColor = isDark ? Colors.amber : theme.colorScheme.primary;
+      final icon = isDark ? Icons.wb_sunny : Icons.nightlight_round;
+
+      return SizedBox(
+        width: 44,
+        height: 44,
+        child: Material(
+          color: bgColor,
+          shape: CircleBorder(),
+          elevation: 0,
+          child: Center(
+            child: IconButton(
+              padding: EdgeInsets.zero,
+              constraints: BoxConstraints(),
+              tooltip: s.isDarkMode ? 'Light mode' : 'Dark mode',
+              onPressed: () => s.toggleTheme(),
+              icon: Icon(icon, size: 18),
+              color: iconColor,
+            ),
+          ),
+        ),
+      );
+    });
   }
 }
 
@@ -1896,9 +2132,12 @@ class ParkingCard extends StatelessWidget {
 }
 // Simple map grid painter for placeholder map
 class _MapGridPainter extends CustomPainter {
+  final Color gridColor;
+  _MapGridPainter({required this.gridColor});
+
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.grey.shade300.withOpacity(0.3)..strokeWidth = 1;
+    final paint = Paint()..color = gridColor..strokeWidth = 1;
     final step = 40.0;
     for (double x = 0; x < size.width; x += step) {
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
@@ -1915,7 +2154,10 @@ class _MapGridPainter extends CustomPainter {
 class _MapMarker extends StatefulWidget {
   final Offset position;
   final ParkingListing parking;
-  const _MapMarker({required this.position, required this.parking, Key? key}) : super(key: key);
+  final bool highlighted;
+  final void Function(String)? onEnter;
+  final VoidCallback? onExit;
+  const _MapMarker({required this.position, required this.parking, this.highlighted = false, this.onEnter, this.onExit, Key? key}) : super(key: key);
 
   @override
   State<_MapMarker> createState() => _MapMarkerState();
@@ -1924,8 +2166,38 @@ class _MapMarker extends StatefulWidget {
 class _MapMarkerState extends State<_MapMarker> {
   bool hover = false;
 
+  Timer? _localExitTimer;
+
+  void _delayedLocalExit() {
+    _localExitTimer?.cancel();
+    _localExitTimer = Timer(const Duration(milliseconds: 200), () {
+      if (mounted) setState(() => hover = false);
+    });
+  }
+
+  @override
+  void dispose() {
+    _localExitTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant _MapMarker oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // If parent highlights this marker, ensure hover is shown; if parent un-highlights, hide it.
+    if (widget.highlighted && !hover) {
+      setState(() => hover = true);
+    } else if (!widget.highlighted && hover) {
+      setState(() => hover = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    // if parent marks this marker highlighted (from list hover), show info box
+    if (widget.highlighted && !hover) {
+      hover = true;
+    }
     final isDisabled = Provider.of<MyAppState>(context).aktivnaRezervacija() != null;
     // Larger pin sizing for zoomed-in feel
     final double pinSize = 48.0;
@@ -1944,17 +2216,31 @@ class _MapMarkerState extends State<_MapMarker> {
               Positioned(
                 bottom: pinSize + 8,
                 child: MouseRegion(
-                  onEnter: (_) => setState(() => hover = true),
-                  onExit: (_) => setState(() => hover = false),
+                  onEnter: (_) {
+                    _localExitTimer?.cancel();
+                    if (widget.onEnter != null) widget.onEnter!(widget.parking.name);
+                    setState(() => hover = true);
+                  },
+                  onExit: (_) {
+                    if (widget.onExit != null) widget.onExit!();
+                    _delayedLocalExit();
+                  },
                   child: _buildInfoBox(context, isDisabled),
                 ),
               ),
             // Pin area: limit hover/tap to the icon only
             Positioned(
               bottom: 0,
-              child: MouseRegion(
-                onEnter: (_) => setState(() => hover = true),
-                onExit: (_) => setState(() => hover = false),
+                child: MouseRegion(
+                onEnter: (_) {
+                  _localExitTimer?.cancel();
+                  if (widget.onEnter != null) widget.onEnter!(widget.parking.name);
+                  setState(() => hover = true);
+                },
+                onExit: (_) {
+                  if (widget.onExit != null) widget.onExit!();
+                  _delayedLocalExit();
+                },
                 child: GestureDetector(
                   onTap: () => setState(() => hover = !hover),
                   child: _buildColoredPin(widget.parking, pinSize),
@@ -1968,27 +2254,44 @@ class _MapMarkerState extends State<_MapMarker> {
   }
 
   Widget _buildInfoBox(BuildContext context, bool isDisabled) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return Container(
       width: 240,
       padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? Color(0xFF0B1220) : Colors.white,
         borderRadius: BorderRadius.circular(8),
         boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8)],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(widget.parking.name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          Text(widget.parking.name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: theme.textTheme.bodyLarge?.color)),
           SizedBox(height: 6),
-          Text(widget.parking.address, style: TextStyle(color: Colors.grey)),
+          Text(widget.parking.address, style: TextStyle(color: theme.textTheme.bodySmall?.color)),
           SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Dostupno: ${widget.parking.available}'),
-              Text('\$${widget.parking.pricePerHour}/sat', style: TextStyle(color: Colors.blue)),
+              Text('Dostupno: ${widget.parking.available}', style: TextStyle(color: theme.textTheme.bodySmall?.color)),
+              Text('\$${widget.parking.pricePerHour}/sat', style: TextStyle(color: theme.colorScheme.primary)),
             ],
+          ),
+          SizedBox(height: 12),
+          Center(
+            child: ElevatedButton(
+              onPressed: () {
+                if (!isDisabled) {
+                  showDialog(context: context, builder: (context) => ParkingSpaceSelectionDialog(parking: widget.parking));
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.colorScheme.primary,
+                foregroundColor: isDark ? Colors.black87 : Colors.white,
+              ),
+              child: Text('Rezerviši Sada'),
+            ),
           ),
         ],
       ),
